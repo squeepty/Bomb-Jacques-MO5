@@ -5,6 +5,27 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; SelectBitmapPlane / SelectColorPlane
+;
+; Purpose:
+;   Selects which MO5 video plane is visible at $0000-$1F3F.
+;
+; Modified:
+;   A
+;------------------------------------------------------------------------------
+SelectBitmapPlane:
+        lda     VIDEO_BANK_SELECT
+        ora     #$01
+        sta     VIDEO_BANK_SELECT
+        rts
+
+SelectColorPlane:
+        lda     VIDEO_BANK_SELECT
+        anda    #$FE
+        sta     VIDEO_BANK_SELECT
+        rts
+
+;------------------------------------------------------------------------------
 ; ClearScreen
 ;
 ; Purpose:
@@ -20,10 +41,13 @@
 ;   A, B, D, X, Y
 ;
 ; Algorithm:
-;   1. Write 8000 zero bytes to bitmap RAM using 16-bit stores.
-;   2. Write 8000 color bytes to color RAM using 8-bit stores.
+;   1. Select the bitmap plane and write 8000 zero bytes.
+;   2. Select the color plane and write 8000 color bytes.
+;   3. Restore bitmap plane selection before returning.
 ;------------------------------------------------------------------------------
 ClearScreen:
+        jsr     SelectBitmapPlane
+
         ldx     #VIDEO_BITMAP_BASE
         ldd     #$0000
         ldy     #VIDEO_BITMAP_WORDS
@@ -32,6 +56,8 @@ ClearBitmapLoop:
         std     ,x++
         leay    -1,y
         bne     ClearBitmapLoop
+
+        jsr     SelectColorPlane
 
         ldx     #VIDEO_COLOR_BASE
         ldb     #COLOR_TITLE
@@ -42,6 +68,7 @@ ClearColorLoop:
         leay    -1,y
         bne     ClearColorLoop
 
+        jsr     SelectBitmapPlane
         rts
 
 ;------------------------------------------------------------------------------
@@ -56,13 +83,13 @@ ClearColorLoop:
 ;   B = text row, 0-24
 ;
 ; Output:
-;   String is drawn to bitmap and color RAM.
+;   String is drawn to bitmap RAM. Color RAM is initialized by ClearScreen.
 ;
 ; Modified:
 ;   A, B, D, X, Y, U
 ;
 ; Algorithm:
-;   1. Convert the text-cell coordinate into bitmap and color addresses.
+;   1. Convert the text-cell coordinate into a bitmap address.
 ;   2. Read one character from the string.
 ;   3. Draw its 8x8 glyph.
 ;   4. Advance one screen byte to the next cell and repeat until zero.
@@ -89,7 +116,7 @@ DrawStringDone:
 ; CellAddress
 ;
 ; Purpose:
-;   Converts a text-cell coordinate into bitmap and color addresses.
+;   Converts a text-cell coordinate into bitmap/color-plane addresses.
 ;
 ; Input:
 ;   A = text column, 0-39
@@ -97,7 +124,7 @@ DrawStringDone:
 ;
 ; Output:
 ;   X = bitmap address for the top-left byte of the cell
-;   Y = color address for the top-left byte of the cell
+;   Y = same address in the alternate color plane
 ;
 ; Modified:
 ;   A, B, D, X, Y
@@ -117,7 +144,6 @@ CellAddress:
         adca    #0
         addd    #VIDEO_BITMAP_BASE
         tfr     d,x
-        addd    #VIDEO_COLOR_BASE - VIDEO_BITMAP_BASE
         tfr     d,y
         rts
 
@@ -157,7 +183,7 @@ TextRowOffsets:
 ; Input:
 ;   A = ASCII character to draw
 ;   X = bitmap address for top glyph row
-;   Y = color address for top glyph row
+;   Y = color-plane address for top glyph row, currently unused
 ;
 ; Output:
 ;   One glyph is drawn.
@@ -169,7 +195,6 @@ TextRowOffsets:
 ;   1. Convert lowercase letters to uppercase.
 ;   2. Select the matching temporary BUILD 001 glyph.
 ;   3. Copy 8 glyph bytes, one per bitmap row.
-;   4. Write the matching color byte for each row.
 ;------------------------------------------------------------------------------
 DrawGlyphAtCell:
         cmpa    #'a'
@@ -266,10 +291,7 @@ DrawGlyphCopy:
 DrawGlyphRow:
         lda     ,u+
         sta     ,x
-        lda     #COLOR_TITLE
-        sta     ,y
         leax    VIDEO_BYTES_PER_ROW,x
-        leay    VIDEO_BYTES_PER_ROW,y
         decb
         bne     DrawGlyphRow
 

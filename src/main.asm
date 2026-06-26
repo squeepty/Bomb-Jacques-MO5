@@ -26,12 +26,14 @@
 ;   All registers may be modified during initialization.
 ;
 ; Algorithm:
-;   1. Initialize the stack pointer.
-;   2. Clear bitmap and color video RAM.
-;   3. Draw the title screen.
-;   4. Stay in an infinite loop so the screen remains visible.
+;   1. Disable interrupts while BUILD 001 owns the machine.
+;   2. Initialize the stack pointer.
+;   3. Clear bitmap and color video RAM.
+;   4. Draw the title screen.
+;   5. Stay in an infinite loop so the screen remains visible.
 ;------------------------------------------------------------------------------
 Start:
+        orcc    #$50
         lds     #STACK_TOP
 
         jsr     ClearScreen
