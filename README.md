@@ -29,10 +29,17 @@ tools/build.sh
 
 The script writes:
 
-- `build/bomb-jacques.raw`: raw bytes assembled at `$6000`
-- `build/bomb-jacques.bin`: binary block output with load and exec metadata
+- `build/bomb-jacques.bin`: raw DCMOTO binary bytes assembled at `$6000`
+- `build/bomb-jacques.raw`: same raw bytes, kept as an explicit raw copy
+- `build/DCMOTO_LOAD.txt`: exact DCMOTO load addresses
 - `build/bomb-jacques.lst`: annotated assembler listing
 - `build/bomb-jacques.map`: symbol map
+
+## DCMOTO
+
+Open the debugger with `F9`, set the binary loader range shown in
+`build/DCMOTO_LOAD.txt`, then use `F6` to load `build/bomb-jacques.bin`.
+Set the program counter to `$6000` and run.
 
 ## Project Map
 

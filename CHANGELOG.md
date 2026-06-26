@@ -8,6 +8,7 @@ Added:
 - LWTOOLS build script.
 - Direct MO5 video-memory title screen.
 - Baseline documentation for memory, video, build notes, and design.
+- DCMOTO raw binary output with load-address notes.
 
 Expected:
 

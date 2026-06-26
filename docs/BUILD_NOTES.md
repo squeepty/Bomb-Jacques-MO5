@@ -21,7 +21,7 @@ Added:
 - A documented 6809 entry point at `$6000`.
 - Direct bitmap/color RAM clearing.
 - A small 8x8 title font.
-- A binary-block output intended for LOADM-style workflows.
+- A raw DCMOTO binary output and address sheet.
 
 Expected:
 
@@ -36,6 +36,18 @@ BUILD 001
 Observed:
 
 The source assembles successfully with LWTOOLS.
+
+The DCMOTO binary loader file is:
+
+```text
+build/bomb-jacques.bin
+```
+
+Use the address range written to:
+
+```text
+build/DCMOTO_LOAD.txt
+```
 
 Status:
 
