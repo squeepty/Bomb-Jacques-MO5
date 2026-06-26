@@ -31,15 +31,24 @@ The script writes:
 
 - `build/bomb-jacques.bin`: raw DCMOTO binary bytes assembled at `$6000`
 - `build/bomb-jacques.raw`: same raw bytes, kept as an explicit raw copy
+- `build/bomb-jacques.k7`: DCMOTO cassette image
 - `build/DCMOTO_LOAD.txt`: exact DCMOTO load addresses
 - `build/bomb-jacques.lst`: annotated assembler listing
 - `build/bomb-jacques.map`: symbol map
 
 ## DCMOTO
 
-Open the debugger with `F9`, set the binary loader range shown in
-`build/DCMOTO_LOAD.txt`, then use `F6` to load `build/bomb-jacques.bin`.
-Set the program counter to `$6000` and run.
+For cassette loading, use `Supports amovibles > Cassette > Charger` and select
+`build/bomb-jacques.k7`. At the MO5 BASIC prompt, type:
+
+```text
+CLOADM
+EXEC
+```
+
+For debugger loading, open the debugger with `F9`, set the binary loader range
+shown in `build/DCMOTO_LOAD.txt`, then use `F6` to load
+`build/bomb-jacques.bin`. Set the program counter to `$6000` and run.
 
 ## Project Map
 

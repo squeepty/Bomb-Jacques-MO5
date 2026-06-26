@@ -9,6 +9,7 @@ Added:
 - Direct MO5 video-memory title screen.
 - Baseline documentation for memory, video, build notes, and design.
 - DCMOTO raw binary output with load-address notes.
+- DCMOTO `.k7` cassette image output.
 
 Expected:
 

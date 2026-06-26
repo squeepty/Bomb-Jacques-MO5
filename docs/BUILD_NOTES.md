@@ -22,6 +22,7 @@ Added:
 - Direct bitmap/color RAM clearing.
 - A small 8x8 title font.
 - A raw DCMOTO binary output and address sheet.
+- A DCMOTO `.k7` cassette image.
 
 Expected:
 
@@ -41,6 +42,12 @@ The DCMOTO binary loader file is:
 
 ```text
 build/bomb-jacques.bin
+```
+
+The DCMOTO cassette image is:
+
+```text
+build/bomb-jacques.k7
 ```
 
 Use the address range written to:

@@ -8,6 +8,8 @@ MAIN="$SRC_DIR/main.asm"
 
 RAW_OUT="$BUILD_DIR/bomb-jacques.raw"
 BIN_OUT="$BUILD_DIR/bomb-jacques.bin"
+LOADM_OUT="$BUILD_DIR/bomb-jacques.loadm"
+K7_OUT="$BUILD_DIR/bomb-jacques.k7"
 LIST_OUT="$BUILD_DIR/bomb-jacques.lst"
 MAP_OUT="$BUILD_DIR/bomb-jacques.map"
 LOAD_OUT="$BUILD_DIR/DCMOTO_LOAD.txt"
@@ -31,6 +33,15 @@ lwasm \
 
 cp "$BIN_OUT" "$RAW_OUT"
 
+lwasm \
+    --6809 \
+    --format=decb \
+    --includedir="$SRC_DIR" \
+    --output="$LOADM_OUT" \
+    "$MAIN"
+
+node "$ROOT_DIR/tools/make-k7.mjs" "$LOADM_OUT" "$K7_OUT" BOMBJAC
+
 BIN_SIZE=$(wc -c < "$BIN_OUT" | tr -d ' ')
 LOAD_START_HEX=6000
 LOAD_END_DEC=$((0x6000 + BIN_SIZE - 1))
@@ -46,6 +57,11 @@ LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
     printf "End address:   $%s\n" "$LOAD_END_HEX"
     printf "Exec address:  $%s\n" "$LOAD_START_HEX"
     printf "\n"
+    printf "Cassette image:\n"
+    printf "\n"
+    printf "File: %s\n" "$K7_OUT"
+    printf "Use Supports amovibles > Cassette > Charger, then type CLOADM and EXEC.\n"
+    printf "\n"
     printf "In DCMOTO:\n"
     printf "1. Press F9 to open the debugger.\n"
     printf "2. Set the binary load range to $%s-$%s.\n" "$LOAD_START_HEX" "$LOAD_END_HEX"
@@ -56,6 +72,8 @@ LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
 echo "BUILD 001 assembled"
 echo "  dcmoto bin: $BIN_OUT"
 echo "  raw copy:   $RAW_OUT"
+echo "  loadm:      $LOADM_OUT"
+echo "  cassette:   $K7_OUT"
 echo "  load notes: $LOAD_OUT"
 echo "  list:       $LIST_OUT"
 echo "  map:        $MAP_OUT"
