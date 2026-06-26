@@ -60,7 +60,7 @@ LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
     printf "Cassette image:\n"
     printf "\n"
     printf "File: %s\n" "$K7_OUT"
-    printf "Use Supports amovibles > Cassette > Charger, then type CLOADM and EXEC.\n"
+    printf "Use Supports amovibles > Cassette > Charger, then type LOADM\"\",,R.\n"
     printf "\n"
     printf "In DCMOTO:\n"
     printf "1. Press F9 to open the debugger.\n"

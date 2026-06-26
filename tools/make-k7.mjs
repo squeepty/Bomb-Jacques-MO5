@@ -57,9 +57,9 @@ function block(type, body) {
 const fileName = asciiPadded(nameArg, 8);
 const extension = asciiPadded("BIN", 3);
 
-// MO5 K7 file header. The last three bytes are file flags; existing DCMOTO
-// examples use zeroes here for ordinary unprotected files.
-block(0x00, [...fileName, ...extension, 0x00, 0x00, 0x00]);
+// MO5 K7 file header. The first flag is the Thomson file type:
+// 00 = BASIC, 01 = data, 02 = machine-code binary for LOADM.
+block(0x00, [...fileName, ...extension, 0x02, 0x00, 0x00]);
 
 for (let offset = 0; offset < payload.length; offset += 254) {
   block(0x01, [...payload.subarray(offset, offset + 254)]);
