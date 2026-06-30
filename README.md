@@ -8,16 +8,37 @@ run, and explain the MO5 concepts it introduces.
 
 ## Current Milestone
 
-BUILD 001 implements the first boot screen:
+BUILD 007 implements lives, death, respawn, and game over:
 
 ```text
-Bomb Jacques
-
-BUILD 001
+BOMB JACQUES BUILD 007
+LIVES 3      SCORE 0000
 ```
 
-The display is drawn directly into MO5 video RAM. No BASIC or ROM text routines
-are used by the game code.
+The game draws a static arena with platforms, bombs, and 2x2-cell Jacques
+sprites. The player can move left and right, jump, fall under gravity, land on
+platforms, collect bombs, float slowly while jump is held during a fall, and
+increase the score. One bomb is highlighted as the current bonus target;
+collecting it awards 200 points, advances the highlight to the next active
+bomb, and flashes `BONUS` in the HUD. Normal bombs award 50 points, bonus balls
+award 500 points, and frozen enemies award 100 points.
+One 2x2 enemy spawns from varied top columns, falls, walks on platforms when
+supported, then transforms into a flying phase 2 after reaching the bottom
+floor. A one-second two-frame effect plays before it becomes active and again
+before phase 2 activates. A second 2x2 enemy flies horizontally and vertically,
+with 80% chase movement toward Jacques and 20% wandering.
+
+Jacques starts with 3 lives. Touching either enemy flashes `HIT`, pauses play,
+subtracts one life, then respawns Jacques at the starting position. When no
+lives remain, the game shows `GAME OVER` and stops gameplay.
+
+Controls:
+
+- `Q`: move left
+- `D`: move right
+- `Space`: jump
+
+The standard MO5 game-extension joystick is also read when present.
 
 ## Build
 
@@ -42,8 +63,7 @@ For cassette loading, use `Supports amovibles > Cassette > Charger` and select
 `build/bomb-jacques.k7`. At the MO5 BASIC prompt, type:
 
 ```text
-CLOADM
-EXEC
+LOADM"",,R
 ```
 
 For debugger loading, open the debugger with `F9`, set the binary loader range

@@ -8,7 +8,7 @@ This project starts with only a few 6809 ideas:
 - `LDS` initializes the stack pointer.
 - `JSR` calls a routine.
 - `RTS` returns from a routine.
-- `BRA` branches forever in the BUILD 001 idle loop.
+- `BRA` branches forever at the end of the BUILD 007 frame loop.
 - `X`, `Y`, and `U` are 16-bit index registers, useful for walking through
   screen memory and string data.
 

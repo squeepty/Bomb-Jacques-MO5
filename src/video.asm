@@ -1,7 +1,7 @@
 ;==============================================================================
 ; video.asm
 ;
-; BUILD 001 video routines for the Thomson MO5 bitmap display.
+; BUILD 008 video routines for the Thomson MO5 bitmap display.
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ SelectColorPlane:
 ;   None.
 ;
 ; Output:
-;   Bitmap RAM is zeroed. Color RAM is filled with COLOR_TITLE.
+;   Bitmap RAM is zeroed. Color RAM is filled with COLOR_BACKGROUND.
 ;
 ; Modified:
 ;   A, B, D, X, Y
@@ -60,13 +60,123 @@ ClearBitmapLoop:
         jsr     SelectColorPlane
 
         ldx     #VIDEO_COLOR_BASE
-        ldb     #COLOR_TITLE
+        ldb     #COLOR_BACKGROUND
         ldy     #VIDEO_COLOR_BYTES
 
 ClearColorLoop:
         stb     ,x+
         leay    -1,y
         bne     ClearColorLoop
+
+        jsr     SelectBitmapPlane
+        rts
+
+;------------------------------------------------------------------------------
+; DrawCellPattern
+;
+; Purpose:
+;   Draws one 8x8 bitmap cell and its matching color attributes.
+;
+; Input:
+;   U = address of 8-byte cell bitmap
+;   A = text column, 0-39
+;   B = text row, 0-24
+;   DrawCellColor = color attribute byte
+;
+; Output:
+;   One 8x8 cell is drawn. Bitmap plane is selected before return.
+;
+; Modified:
+;   A, B, X, Y, U
+;------------------------------------------------------------------------------
+DrawCellPattern:
+        jsr     CellAddress
+
+        pshs    x,u
+        jsr     SelectBitmapPlane
+        puls    x,u
+
+        pshs    x
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawCellBitmapRow:
+        lda     ,u+
+        sta     ,x
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawCellBitmapRow
+
+        puls    x
+        jsr     SelectColorPlane
+
+        lda     DrawCellColor
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawCellColorRow:
+        sta     ,x
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawCellColorRow
+
+        jsr     SelectBitmapPlane
+        rts
+
+;------------------------------------------------------------------------------
+; DrawCellPatternMasked
+;
+; Purpose:
+;   Draws one 8x8 bitmap cell while leaving zero sprite pixels untouched.
+;
+; Input:
+;   U = address of 8-byte cell bitmap
+;   A = text column, 0-39
+;   B = text row, 0-24
+;   DrawCellColor = color attribute byte
+;
+; Output:
+;   Non-zero bitmap pixels are merged into the destination cell. Color
+;   attributes are written only on rows that contain sprite pixels. Bitmap plane
+;   is selected before return.
+;
+; Modified:
+;   A, B, X, U
+;------------------------------------------------------------------------------
+DrawCellPatternMasked:
+        jsr     CellAddress
+
+        pshs    x,u
+        jsr     SelectBitmapPlane
+        puls    x,u
+
+        pshs    x,u
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawCellMaskedBitmapRow:
+        lda     ,u+
+        beq     DrawCellMaskedBitmapNext
+        ora     ,x
+        sta     ,x
+
+DrawCellMaskedBitmapNext:
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawCellMaskedBitmapRow
+
+        puls    x,u
+        jsr     SelectColorPlane
+
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawCellMaskedColorRow:
+        lda     ,u+
+        beq     DrawCellMaskedColorNext
+        lda     DrawCellColor
+        sta     ,x
+
+DrawCellMaskedColorNext:
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawCellMaskedColorRow
 
         jsr     SelectBitmapPlane
         rts
@@ -110,6 +220,44 @@ DrawStringNext:
         bra     DrawStringNext
 
 DrawStringDone:
+        rts
+
+DrawStringShiftRight4:
+        jsr     CellAddress
+
+DrawStringShiftRight4Next:
+        lda     ,u+
+        beq     DrawStringShiftRight4Done
+
+        pshs    x,y,u
+        jsr     DrawGlyphAtCellShiftRight4
+        puls    x,y,u
+
+        leax    1,x
+        leay    1,y
+        bra     DrawStringShiftRight4Next
+
+DrawStringShiftRight4Done:
+        rts
+
+DrawStringDown4:
+        jsr     CellAddress
+        leax    4*VIDEO_BYTES_PER_ROW,x
+        leay    4*VIDEO_BYTES_PER_ROW,y
+
+DrawStringDown4Next:
+        lda     ,u+
+        beq     DrawStringDown4Done
+
+        pshs    x,y,u
+        jsr     DrawGlyphAtCell
+        puls    x,y,u
+
+        leax    1,x
+        leay    1,y
+        bra     DrawStringDown4Next
+
+DrawStringDown4Done:
         rts
 
 ;------------------------------------------------------------------------------
@@ -193,7 +341,7 @@ TextRowOffsets:
 ;
 ; Algorithm:
 ;   1. Convert lowercase letters to uppercase.
-;   2. Select the matching temporary BUILD 001 glyph.
+;   2. Select the matching temporary glyph.
 ;   3. Copy 8 glyph bytes, one per bitmap row.
 ;------------------------------------------------------------------------------
 DrawGlyphAtCell:
@@ -208,10 +356,38 @@ DrawGlyphFind:
 
         cmpa    #' '
         lbeq    DrawGlyphCopy
+        cmpa    #'!'
+        lbeq    DrawGlyphUseBang
+        cmpa    #$22
+        lbeq    DrawGlyphUseQuote
+        cmpa    #'#'
+        lbeq    DrawGlyphUseHash
+        cmpa    #','
+        lbeq    DrawGlyphUseComma
+        cmpa    #'-'
+        lbeq    DrawGlyphUseDash
+        cmpa    #':'
+        lbeq    DrawGlyphUseColon
         cmpa    #'0'
         lbeq    DrawGlyphUse0
         cmpa    #'1'
         lbeq    DrawGlyphUse1
+        cmpa    #'2'
+        lbeq    DrawGlyphUse2
+        cmpa    #'3'
+        lbeq    DrawGlyphUse3
+        cmpa    #'4'
+        lbeq    DrawGlyphUse4
+        cmpa    #'5'
+        lbeq    DrawGlyphUse5
+        cmpa    #'6'
+        lbeq    DrawGlyphUse6
+        cmpa    #'7'
+        lbeq    DrawGlyphUse7
+        cmpa    #'8'
+        lbeq    DrawGlyphUse8
+        cmpa    #'9'
+        lbeq    DrawGlyphUse9
         cmpa    #'A'
         lbeq    DrawGlyphUseA
         cmpa    #'B'
@@ -222,70 +398,179 @@ DrawGlyphFind:
         lbeq    DrawGlyphUseD
         cmpa    #'E'
         lbeq    DrawGlyphUseE
+        cmpa    #'F'
+        lbeq    DrawGlyphUseF
+        cmpa    #'G'
+        lbeq    DrawGlyphUseG
+        cmpa    #'H'
+        lbeq    DrawGlyphUseH
         cmpa    #'I'
         lbeq    DrawGlyphUseI
         cmpa    #'J'
         lbeq    DrawGlyphUseJ
+        cmpa    #'K'
+        lbeq    DrawGlyphUseK
         cmpa    #'L'
         lbeq    DrawGlyphUseL
         cmpa    #'M'
         lbeq    DrawGlyphUseM
+        cmpa    #'N'
+        lbeq    DrawGlyphUseN
         cmpa    #'O'
         lbeq    DrawGlyphUseO
+        cmpa    #'P'
+        lbeq    DrawGlyphUseP
         cmpa    #'Q'
         lbeq    DrawGlyphUseQ
+        cmpa    #'R'
+        lbeq    DrawGlyphUseR
         cmpa    #'S'
         lbeq    DrawGlyphUseS
+        cmpa    #'T'
+        lbeq    DrawGlyphUseT
         cmpa    #'U'
         lbeq    DrawGlyphUseU
+        cmpa    #'V'
+        lbeq    DrawGlyphUseV
+        cmpa    #'W'
+        lbeq    DrawGlyphUseW
+        cmpa    #'X'
+        lbeq    DrawGlyphUseX
+        cmpa    #'Y'
+        lbeq    DrawGlyphUseY
+        cmpa    #'Z'
+        lbeq    DrawGlyphUseZ
         lbra    DrawGlyphCopy
 
+DrawGlyphUseBang:
+        ldu     #GlyphBang
+        lbra    DrawGlyphCopy
+DrawGlyphUseQuote:
+        ldu     #GlyphQuote
+        lbra    DrawGlyphCopy
+DrawGlyphUseHash:
+        ldu     #GlyphHash
+        lbra    DrawGlyphCopy
+DrawGlyphUseComma:
+        ldu     #GlyphComma
+        lbra    DrawGlyphCopy
+DrawGlyphUseDash:
+        ldu     #GlyphDash
+        lbra    DrawGlyphCopy
+DrawGlyphUseColon:
+        ldu     #GlyphColon
+        lbra    DrawGlyphCopy
 DrawGlyphUse0:
         ldu     #Glyph0
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUse1:
         ldu     #Glyph1
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUse2:
+        ldu     #Glyph2
+        lbra    DrawGlyphCopy
+DrawGlyphUse3:
+        ldu     #Glyph3
+        lbra    DrawGlyphCopy
+DrawGlyphUse4:
+        ldu     #Glyph4
+        lbra    DrawGlyphCopy
+DrawGlyphUse5:
+        ldu     #Glyph5
+        lbra    DrawGlyphCopy
+DrawGlyphUse6:
+        ldu     #Glyph6
+        lbra    DrawGlyphCopy
+DrawGlyphUse7:
+        ldu     #Glyph7
+        lbra    DrawGlyphCopy
+DrawGlyphUse8:
+        ldu     #Glyph8
+        lbra    DrawGlyphCopy
+DrawGlyphUse9:
+        ldu     #Glyph9
+        lbra    DrawGlyphCopy
 DrawGlyphUseA:
         ldu     #GlyphA
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseB:
         ldu     #GlyphB
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseC:
         ldu     #GlyphC
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseD:
         ldu     #GlyphD
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseE:
         ldu     #GlyphE
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseF:
+        ldu     #GlyphF
+        lbra    DrawGlyphCopy
+DrawGlyphUseG:
+        ldu     #GlyphG
+        lbra    DrawGlyphCopy
+DrawGlyphUseH:
+        ldu     #GlyphH
+        lbra    DrawGlyphCopy
 DrawGlyphUseI:
         ldu     #GlyphI
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseJ:
         ldu     #GlyphJ
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseK:
+        ldu     #GlyphK
+        lbra    DrawGlyphCopy
 DrawGlyphUseL:
         ldu     #GlyphL
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
 DrawGlyphUseM:
         ldu     #GlyphM
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseN:
+        ldu     #GlyphN
+        lbra    DrawGlyphCopy
 DrawGlyphUseO:
         ldu     #GlyphO
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseP:
+        ldu     #GlyphP
+        lbra    DrawGlyphCopy
 DrawGlyphUseQ:
         ldu     #GlyphQ
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseR:
+        ldu     #GlyphR
+        lbra    DrawGlyphCopy
 DrawGlyphUseS:
         ldu     #GlyphS
-        bra     DrawGlyphCopy
+        lbra    DrawGlyphCopy
+DrawGlyphUseT:
+        ldu     #GlyphT
+        lbra    DrawGlyphCopy
 DrawGlyphUseU:
         ldu     #GlyphU
+        lbra    DrawGlyphCopy
+DrawGlyphUseV:
+        ldu     #GlyphV
+        lbra    DrawGlyphCopy
+DrawGlyphUseW:
+        ldu     #GlyphW
+        lbra    DrawGlyphCopy
+DrawGlyphUseX:
+        ldu     #GlyphX
+        lbra    DrawGlyphCopy
+DrawGlyphUseY:
+        ldu     #GlyphY
+        lbra    DrawGlyphCopy
+DrawGlyphUseZ:
+        ldu     #GlyphZ
 
 DrawGlyphCopy:
+        lda     GlyphShiftMode
+        bne     DrawGlyphCopyShiftRight4
         ldb     #TEXT_CELL_HEIGHT
 
 DrawGlyphRow:
@@ -297,7 +582,41 @@ DrawGlyphRow:
 
         rts
 
-; Temporary 8x8 glyph set for BUILD 001.
+DrawGlyphAtCellShiftRight4:
+        pshs    a
+        lda     #1
+        sta     GlyphShiftMode
+        puls    a
+        jsr     DrawGlyphAtCell
+        clr     GlyphShiftMode
+        rts
+
+DrawGlyphCopyShiftRight4:
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawGlyphShiftRight4Row:
+        lda     ,u+
+        pshs    a
+        lsra
+        lsra
+        lsra
+        lsra
+        ora     ,x
+        sta     ,x
+        puls    a
+        asla
+        asla
+        asla
+        asla
+        ora     1,x
+        sta     1,x
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawGlyphShiftRight4Row
+
+        rts
+
+; Temporary 8x8 glyph set.
 ; Each byte is one row. Bit 7 is the leftmost pixel.
 
 GlyphSpace:
@@ -308,6 +627,66 @@ GlyphSpace:
         fcb     %00000000
         fcb     %00000000
         fcb     %00000000
+        fcb     %00000000
+
+GlyphBang:
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00000000
+        fcb     %00011000
+        fcb     %00000000
+
+GlyphQuote:
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00100100
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+
+GlyphHash:
+        fcb     %00100100
+        fcb     %00100100
+        fcb     %01111110
+        fcb     %00100100
+        fcb     %01111110
+        fcb     %00100100
+        fcb     %00100100
+        fcb     %00000000
+
+GlyphComma:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00110000
+
+GlyphDash:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %01111110
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+
+GlyphColon:
+        fcb     %00000000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00011000
+        fcb     %00011000
         fcb     %00000000
 
 Glyph0:
@@ -328,6 +707,86 @@ Glyph1:
         fcb     %00011000
         fcb     %00011000
         fcb     %01111110
+        fcb     %00000000
+
+Glyph2:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %00000110
+        fcb     %00001100
+        fcb     %00110000
+        fcb     %01100000
+        fcb     %01111110
+        fcb     %00000000
+
+Glyph3:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %00000110
+        fcb     %00011100
+        fcb     %00000110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00000000
+
+Glyph4:
+        fcb     %00001100
+        fcb     %00011100
+        fcb     %00111100
+        fcb     %01101100
+        fcb     %01111110
+        fcb     %00001100
+        fcb     %00001100
+        fcb     %00000000
+
+Glyph5:
+        fcb     %01111110
+        fcb     %01100000
+        fcb     %01111100
+        fcb     %00000110
+        fcb     %00000110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00000000
+
+Glyph6:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100000
+        fcb     %01111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00000000
+
+Glyph7:
+        fcb     %01111110
+        fcb     %00000110
+        fcb     %00001100
+        fcb     %00011000
+        fcb     %00110000
+        fcb     %00110000
+        fcb     %00110000
+        fcb     %00000000
+
+Glyph8:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00000000
+
+Glyph9:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111110
+        fcb     %00000110
+        fcb     %01100110
+        fcb     %00111100
         fcb     %00000000
 
 GlyphA:
@@ -380,6 +839,36 @@ GlyphE:
         fcb     %01111110
         fcb     %00000000
 
+GlyphF:
+        fcb     %01111110
+        fcb     %01100000
+        fcb     %01100000
+        fcb     %01111100
+        fcb     %01100000
+        fcb     %01100000
+        fcb     %01100000
+        fcb     %00000000
+
+GlyphG:
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100000
+        fcb     %01101110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00000000
+
+GlyphH:
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01111110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00000000
+
 GlyphI:
         fcb     %01111110
         fcb     %00011000
@@ -398,6 +887,16 @@ GlyphJ:
         fcb     %01101100
         fcb     %01101100
         fcb     %00111000
+        fcb     %00000000
+
+GlyphK:
+        fcb     %01100110
+        fcb     %01101100
+        fcb     %01111000
+        fcb     %01110000
+        fcb     %01111000
+        fcb     %01101100
+        fcb     %01100110
         fcb     %00000000
 
 GlyphL:
@@ -420,6 +919,16 @@ GlyphM:
         fcb     %01100011
         fcb     %00000000
 
+GlyphN:
+        fcb     %01100110
+        fcb     %01110110
+        fcb     %01111110
+        fcb     %01111110
+        fcb     %01101110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00000000
+
 GlyphO:
         fcb     %00111100
         fcb     %01100110
@@ -428,6 +937,16 @@ GlyphO:
         fcb     %01100110
         fcb     %01100110
         fcb     %00111100
+        fcb     %00000000
+
+GlyphP:
+        fcb     %01111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01111100
+        fcb     %01100000
+        fcb     %01100000
+        fcb     %01100000
         fcb     %00000000
 
 GlyphQ:
@@ -440,6 +959,16 @@ GlyphQ:
         fcb     %00000110
         fcb     %00000000
 
+GlyphR:
+        fcb     %01111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01111100
+        fcb     %01111000
+        fcb     %01101100
+        fcb     %01100110
+        fcb     %00000000
+
 GlyphS:
         fcb     %00111100
         fcb     %01100110
@@ -448,6 +977,16 @@ GlyphS:
         fcb     %00000110
         fcb     %01100110
         fcb     %00111100
+        fcb     %00000000
+
+GlyphT:
+        fcb     %01111110
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
         fcb     %00000000
 
 GlyphU:
@@ -459,3 +998,58 @@ GlyphU:
         fcb     %01100110
         fcb     %00111100
         fcb     %00000000
+
+GlyphV:
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00011000
+        fcb     %00000000
+
+GlyphW:
+        fcb     %01100011
+        fcb     %01100011
+        fcb     %01100011
+        fcb     %01101011
+        fcb     %01111111
+        fcb     %01110111
+        fcb     %01100011
+        fcb     %00000000
+
+GlyphX:
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00011000
+        fcb     %00111100
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00000000
+
+GlyphY:
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00011000
+        fcb     %00000000
+
+GlyphZ:
+        fcb     %01111110
+        fcb     %00000110
+        fcb     %00001100
+        fcb     %00011000
+        fcb     %00110000
+        fcb     %01100000
+        fcb     %01111110
+        fcb     %00000000
+
+DrawCellColor:
+        fcb     COLOR_TEXT
+GlyphShiftMode:
+        fcb     0

@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bomb Jacques Sprite Editor</title>
+  <style>
+    :root {
+      --ink: #111214;
+      --panel: #050505;
+      --panel-text: #f4f4f2;
+      --muted: #6f746f;
+      --line: #3c4244;
+      --paper: #202326;
+      --surface: #272b2e;
+      --surface-2: #31363a;
+      --cyan: #58d9e6;
+      --cyan-soft: #aef2f5;
+      --yellow: #f0c947;
+      --green: #2f8f5b;
+      --danger: #bd3c2f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--panel-text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      overflow: hidden;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sprite-list-panel {
+      background: var(--panel);
+      color: var(--panel-text);
+      border-right: 1px solid #242424;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid #262626;
+    }
+
+    .panel-head h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 22px;
+      margin-top: 10px;
+      color: #b9bbb6;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex: 0 0 auto;
+    }
+
+    .status.ok::before {
+      background: var(--green);
+    }
+
+    .status.busy::before {
+      background: var(--yellow);
+    }
+
+    .status.error::before {
+      background: var(--danger);
+    }
+
+    .sprite-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 8px;
+      scrollbar-color: #5b6266 #111111;
+    }
+
+    .sprite-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 7px 8px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: inherit;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sprite-item:hover {
+      background: #181818;
+    }
+
+    .sprite-item.selected {
+      border-color: var(--yellow);
+      background: #211f14;
+    }
+
+    .sprite-item.dirty .sprite-name::after {
+      content: " *";
+      color: var(--yellow);
+    }
+
+    .sprite-preview {
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      border: 1px solid #343434;
+      background: var(--cyan);
+    }
+
+    .sprite-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .editor {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .toolbar {
+      min-height: 76px;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      background: var(--surface);
+      color: var(--panel-text);
+    }
+
+    .selected-title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 750;
+    }
+
+    .selected-labels {
+      margin-top: 5px;
+      color: #aab1ad;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .action-button {
+      min-width: 86px;
+      height: 38px;
+      border: 1px solid #60686b;
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--panel-text);
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    .action-button.primary {
+      border-color: #151515;
+      background: var(--yellow);
+      color: var(--ink);
+    }
+
+    .action-button:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .workbench {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .edit-stage {
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 104px minmax(0, auto);
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .real-preview-shell {
+      width: 64px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 2px solid var(--ink);
+      background: var(--cyan-soft);
+      justify-self: center;
+    }
+
+    .real-preview {
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      background: transparent;
+    }
+
+    .pixel-grid {
+      width: min(calc(100vh - 128px), calc(100vw - 488px), 680px);
+      min-width: min(320px, calc(100vw - 456px));
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(16, minmax(0, 1fr));
+      grid-template-rows: repeat(16, minmax(0, 1fr));
+      border: 2px solid var(--ink);
+      background: var(--ink);
+    }
+
+    .pixel {
+      min-width: 0;
+      min-height: 0;
+      border: 0;
+      border-right: 1px solid rgba(17, 18, 20, 0.28);
+      border-bottom: 1px solid rgba(17, 18, 20, 0.28);
+      background: var(--cyan-soft);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .pixel.on {
+      background: var(--ink);
+    }
+
+    .pixel.split-x {
+      border-left: 3px solid var(--ink);
+    }
+
+    .pixel.split-y {
+      border-top: 3px solid var(--ink);
+    }
+
+    .pixel:hover {
+      outline: 2px solid var(--yellow);
+      outline-offset: -2px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+        height: 100vh;
+      }
+
+      .sprite-list-panel {
+        height: 168px;
+        min-height: 0;
+        border-right: 0;
+        border-bottom: 1px solid #242424;
+      }
+
+      .sprite-list {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+
+      .sprite-item {
+        min-width: 190px;
+      }
+
+      .toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .edit-stage {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .real-preview-shell {
+        width: 64px;
+        height: 64px;
+      }
+
+      .pixel-grid {
+        width: min(calc(100vh - 420px), 92vw, 560px);
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sprite-list-panel">
+      <div class="panel-head">
+        <h1>Sprite Editor</h1>
+        <div id="status" class="status busy">Loading</div>
+      </div>
+      <div id="spriteList" class="sprite-list" role="listbox" aria-label="Sprites"></div>
+    </aside>
+
+    <main class="editor">
+      <header class="toolbar">
+        <div>
+          <h2 id="selectedTitle" class="selected-title">No Sprite</h2>
+          <div id="selectedLabels" class="selected-labels"></div>
+        </div>
+        <div class="actions">
+          <button id="undoButton" class="action-button" type="button" disabled>Undo</button>
+          <button id="saveButton" class="action-button primary" type="button" disabled>Save</button>
+        </div>
+      </header>
+
+      <section class="workbench">
+        <div class="edit-stage">
+          <div class="real-preview-shell" aria-hidden="true">
+            <canvas id="realPreview" class="real-preview"></canvas>
+          </div>
+          <div id="pixelGrid" class="pixel-grid" aria-label="2 by 2 sprite pixel grid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const spriteList = document.getElementById("spriteList");
+    const pixelGrid = document.getElementById("pixelGrid");
+    const realPreview = document.getElementById("realPreview");
+    const selectedTitle = document.getElementById("selectedTitle");
+    const selectedLabels = document.getElementById("selectedLabels");
+    const undoButton = document.getElementById("undoButton");
+    const saveButton = document.getElementById("saveButton");
+    const statusEl = document.getElementById("status");
+
+    const state = {
+      sprites: [],
+      selectedId: null,
+      pixels: Array(256).fill(false),
+      savedRows: [],
+      dirty: false,
+      saving: false,
+    };
+
+    function setStatus(text, tone = "") {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (tone ? " " + tone : "");
+    }
+
+    function selectedSprite() {
+      return state.sprites.find((sprite) => sprite.id === state.selectedId) || null;
+    }
+
+    function rowsToPixels(rows) {
+      const pixels = Array(256).fill(false);
+      for (let y = 0; y < 16; y += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          const cell = (y >= 8 ? 2 : 0) + (x >= 8 ? 1 : 0);
+          const row = rows[cell * 8 + (y % 8)];
+          pixels[y * 16 + x] = Boolean(row & (1 << (7 - (x % 8))));
+        }
+      }
+      return pixels;
+    }
+
+    function pixelsToRows(pixels) {
+      const rows = Array(32).fill(0);
+      for (let y = 0; y < 16; y += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          if (!pixels[y * 16 + x]) {
+            continue;
+          }
+          const cell = (y >= 8 ? 2 : 0) + (x >= 8 ? 1 : 0);
+          const index = cell * 8 + (y % 8);
+          rows[index] |= 1 << (7 - (x % 8));
+        }
+      }
+      return rows;
+    }
+
+    function rowsEqual(left, right) {
+      return left.length === right.length && left.every((value, index) => value === right[index]);
+    }
+
+    function drawPreview(canvas, rows) {
+      const context = canvas.getContext("2d");
+      const pixels = rowsToPixels(rows);
+      canvas.width = 32;
+      canvas.height = 32;
+      context.imageSmoothingEnabled = false;
+      context.fillStyle = "#aef2f5";
+      context.fillRect(0, 0, 32, 32);
+      context.fillStyle = "#111214";
+      for (let y = 0; y < 16; y += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          if (pixels[y * 16 + x]) {
+            context.fillRect(x * 2, y * 2, 2, 2);
+          }
+        }
+      }
+    }
+
+    function drawRealPreview() {
+      const context = realPreview.getContext("2d");
+      realPreview.width = 16;
+      realPreview.height = 16;
+      context.imageSmoothingEnabled = false;
+      context.clearRect(0, 0, 16, 16);
+      context.fillStyle = "#111214";
+      for (let y = 0; y < 16; y += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          if (state.pixels[y * 16 + x]) {
+            context.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    function renderList() {
+      spriteList.replaceChildren();
+      state.sprites.forEach((sprite) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "sprite-item";
+        button.dataset.id = sprite.id;
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", sprite.id === state.selectedId ? "true" : "false");
+        if (sprite.id === state.selectedId) {
+          button.classList.add("selected");
+        }
+        if (sprite.id === state.selectedId && state.dirty) {
+          button.classList.add("dirty");
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "sprite-preview";
+        canvas.setAttribute("aria-hidden", "true");
+        drawPreview(canvas, sprite.id === state.selectedId ? pixelsToRows(state.pixels) : sprite.rows);
+
+        const name = document.createElement("span");
+        name.className = "sprite-name";
+        name.textContent = sprite.name;
+
+        button.append(canvas, name);
+        spriteList.append(button);
+      });
+    }
+
+    function renderGrid() {
+      pixelGrid.replaceChildren();
+      for (let y = 0; y < 16; y += 1) {
+        for (let x = 0; x < 16; x += 1) {
+          const index = y * 16 + x;
+          const pixel = document.createElement("button");
+          pixel.type = "button";
+          pixel.className = "pixel";
+          pixel.dataset.index = String(index);
+          pixel.setAttribute("aria-label", "Pixel " + (x + 1) + ", " + (y + 1));
+          if (state.pixels[index]) {
+            pixel.classList.add("on");
+          }
+          if (x === 8) {
+            pixel.classList.add("split-x");
+          }
+          if (y === 8) {
+            pixel.classList.add("split-y");
+          }
+          pixelGrid.append(pixel);
+        }
+      }
+    }
+
+    function renderSelection() {
+      const sprite = selectedSprite();
+      if (!sprite) {
+        selectedTitle.textContent = "No Sprite";
+        selectedLabels.textContent = "";
+        undoButton.disabled = true;
+        saveButton.disabled = true;
+        state.pixels = Array(256).fill(false);
+        drawRealPreview();
+        pixelGrid.innerHTML = "<div class=\"empty-state\">No sprite selected</div>";
+        return;
+      }
+
+      selectedTitle.textContent = sprite.name;
+      selectedLabels.textContent = sprite.labels.join(" / ");
+      undoButton.disabled = !state.dirty || state.saving;
+      saveButton.disabled = !state.dirty || state.saving;
+      drawRealPreview();
+      renderGrid();
+    }
+
+    function render() {
+      renderList();
+      renderSelection();
+    }
+
+    function setDirtyFromPixels() {
+      state.dirty = !rowsEqual(pixelsToRows(state.pixels), state.savedRows);
+      render();
+    }
+
+    function selectSprite(id) {
+      if (state.dirty && !window.confirm("Discard unsaved sprite edits?")) {
+        return;
+      }
+
+      const sprite = state.sprites.find((item) => item.id === id);
+      if (!sprite) {
+        return;
+      }
+
+      state.selectedId = sprite.id;
+      state.savedRows = sprite.rows.slice();
+      state.pixels = rowsToPixels(sprite.rows);
+      state.dirty = false;
+      render();
+    }
+
+    async function loadSprites() {
+      setStatus("Loading", "busy");
+      const response = await fetch("/api/sprites");
+      if (!response.ok) {
+        throw new Error((await response.json()).error || "Unable to load sprites");
+      }
+
+      const payload = await response.json();
+      state.sprites = payload.sprites;
+      if (state.sprites.length > 0) {
+        selectSprite(state.sprites[0].id);
+      } else {
+        render();
+      }
+      setStatus("Ready", "ok");
+    }
+
+    async function saveSprite() {
+      const sprite = selectedSprite();
+      if (!sprite || !state.dirty || state.saving) {
+        return;
+      }
+
+      state.saving = true;
+      renderSelection();
+      setStatus("Saving", "busy");
+
+      try {
+        const response = await fetch("/api/sprites/" + encodeURIComponent(sprite.id), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ rows: pixelsToRows(state.pixels) }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to save sprite");
+        }
+
+        sprite.rows = payload.sprite.rows.slice();
+        state.savedRows = payload.sprite.rows.slice();
+        state.pixels = rowsToPixels(payload.sprite.rows);
+        state.dirty = false;
+        setStatus(payload.build && payload.build.ok ? "Saved and rebuilt" : "Saved, build failed", payload.build && payload.build.ok ? "ok" : "error");
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        state.saving = false;
+        render();
+      }
+    }
+
+    spriteList.addEventListener("click", (event) => {
+      const item = event.target.closest(".sprite-item");
+      if (item) {
+        selectSprite(item.dataset.id);
+      }
+    });
+
+    pixelGrid.addEventListener("click", (event) => {
+      const pixel = event.target.closest(".pixel");
+      if (!pixel || !selectedSprite()) {
+        return;
+      }
+      const index = Number(pixel.dataset.index);
+      state.pixels[index] = !state.pixels[index];
+      setDirtyFromPixels();
+    });
+
+    undoButton.addEventListener("click", () => {
+      if (!selectedSprite()) {
+        return;
+      }
+      state.pixels = rowsToPixels(state.savedRows);
+      state.dirty = false;
+      render();
+      setStatus("Ready", "ok");
+    });
+
+    saveButton.addEventListener("click", saveSprite);
+
+    loadSprites().catch((error) => {
+      setStatus(error.message, "error");
+      render();
+    });
+  </script>
+</body>
+</html>
