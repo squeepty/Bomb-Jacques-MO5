@@ -525,7 +525,8 @@ ResetEnemiesForLevel:
         lda     #1
         sta     Enemy2Active
         sta     Enemy2PrevActive
-        clr     Enemy2FrameCounter
+        lda     #ENEMY2_FRAME_STAGGER
+        sta     Enemy2FrameCounter
         lda     #ENEMY2_AI_SEED
         sta     Enemy2AiSeed
         rts
@@ -1295,7 +1296,8 @@ RespawnEnemy2:
         sta     Enemy2Row
         lda     #ENEMY_MOVE_RIGHT
         sta     Enemy2Dir
-        clr     Enemy2FrameCounter
+        lda     #ENEMY2_FRAME_STAGGER
+        sta     Enemy2FrameCounter
         lda     #ENEMY2_AI_SEED
         sta     Enemy2AiSeed
         lda     #1
@@ -1860,8 +1862,7 @@ ActivateEnemy1FromSpawn:
         sta     Enemy1State
         lda     #ENEMY1_SPRITE_ACTIVE
         sta     Enemy1Sprite
-        clr     Enemy1FrameCounter
-        rts
+        jmp     SetEnemy1MovementCounterStagger
 
 TransformEnemy1ToPhase2:
         lda     Enemy1Personality
@@ -1907,7 +1908,7 @@ UpdateEnemy1Phase3Spawning:
 ActivateEnemy1Phase2:
         lda     #ENEMY1_STATE_PHASE2
         sta     Enemy1State
-        clr     Enemy1FrameCounter
+        jsr     SetEnemy1MovementCounterStagger
 
         lda     Enemy1Dir
         bmi     ActivateEnemy1Phase2Left
@@ -1923,10 +1924,36 @@ ActivateEnemy1Phase2Left:
 ActivateEnemy1Phase3:
         lda     #ENEMY1_STATE_PHASE3
         sta     Enemy1State
-        clr     Enemy1FrameCounter
+        jsr     SetEnemy1MovementCounterStagger
         lda     #ENEMY1_SPRITE_PHASE3
         sta     Enemy1Sprite
         jmp     ArmPowerSpawnAfterPhase3
+
+SetEnemy1MovementCounterStagger:
+        lda     Enemy1Personality
+        cmpa    #ENEMY1_PERSONALITY_FLANKER
+        beq     SetEnemy1MovementCounterSlot2
+        cmpa    #ENEMY1_PERSONALITY_DRIFTER
+        beq     SetEnemy1MovementCounterSlot3
+        cmpa    #ENEMY1_PERSONALITY_PHASE3
+        beq     SetEnemy1MovementCounterSlot4
+        lda     #ENEMY1_FRAME_STAGGER
+        bra     SetEnemy1MovementCounterStore
+
+SetEnemy1MovementCounterSlot2:
+        lda     #ENEMY1_SLOT2_FRAME_STAGGER
+        bra     SetEnemy1MovementCounterStore
+
+SetEnemy1MovementCounterSlot3:
+        lda     #ENEMY1_SLOT3_FRAME_STAGGER
+        bra     SetEnemy1MovementCounterStore
+
+SetEnemy1MovementCounterSlot4:
+        lda     #ENEMY1_SLOT4_FRAME_STAGGER
+
+SetEnemy1MovementCounterStore:
+        sta     Enemy1FrameCounter
+        rts
 
 ;------------------------------------------------------------------------------
 ; StartEnemy1SpawnEffect
