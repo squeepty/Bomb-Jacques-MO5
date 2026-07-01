@@ -10,8 +10,8 @@ Enemy 1 (walker)                4       one every 5 seconds     none            
     Enemy 1 (phase 3 hunter)    1       when reaches ground     80%             Horizontal & Vertical (faster)
 
 Bonus Ball                      1       after 20 seconds        none            Diagonal
-Power Ball                      1       after 30 seconds        none            Diagonal           
-Energy Ball                     1       after 50 seconds        none            Diagonal
+Power Ball                      1       20s after Bonus caught  none            Diagonal
+Energy Ball                     1       20s after Power caught  none            Diagonal
 
 Spec for scoring:
 
@@ -51,4 +51,3 @@ Best path:
    Smoothest visually, but expensive with the current renderer. It would need pre-shifted sprites or runtime bit shifting, larger dirty regions, and probably a better local background restore instead of broad static redraw. Under max sprite load, this could threaten playability.
 
 My recommendation: implement **counter staggering first**, then test **half-cell interpolation only for flying enemies** or only enemy phase 2/3. That keeps gameplay speed stable and avoids turning every frame into a max-cost redraw.
-

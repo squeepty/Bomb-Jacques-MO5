@@ -28,9 +28,11 @@ floor. A one-second two-frame effect plays before it becomes active and again
 before phase 2 activates. A second 2x2 enemy flies horizontally and vertically,
 with 80% chase movement toward Jacques and 20% wandering.
 
-Jacques starts with 3 lives. Touching either enemy flashes `HIT`, pauses play,
-subtracts one life, then respawns Jacques at the starting position. When no
-lives remain, the game shows `GAME OVER` and stops gameplay.
+Jacques starts with 3 lives. Touching either enemy makes Jacques fly straight
+up offscreen while rotating jump poses, subtracts one life, then respawns him at
+the starting position. Movement resumes after a short hold, with a blinking
+grace period. When no lives remain, the game shows `GAME OVER` and stops
+gameplay.
 
 Controls:
 

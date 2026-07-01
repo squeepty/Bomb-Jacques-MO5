@@ -19,8 +19,9 @@ means once the `GET READY` banner has cleared.
 | Enemy 1 (walker) | 4 | one every 5 seconds | none | falls/left/right |
 | Enemy 1 (phase 2 hunter) | 3 | when reaches ground | 70%/80%/50% | Horizontal & Vertical |
 | Enemy 1 (phase 3 hunter) | 1 | when reaches ground | 80% | Horizontal & Vertical (faster) |
-| Power Ball | 1 | after 30 seconds | none | Diagonal |
 | Bonus Ball | 1 | after 20 seconds | none | Diagonal |
+| Power Ball | 1 | 20 seconds after Bonus Ball is caught | none | Diagonal |
+| Energy Ball | 1 | 20 seconds after Power Ball is caught | none | Diagonal |
 
 ## Scoring Reference
 
@@ -42,14 +43,19 @@ of fame, and level-clear states do not consume spawn time.
 | --- | ---: | ---: |
 | Enemy 1 walker spawn interval | 5 seconds | 85 active-play ticks |
 | Bonus Ball spawn | 20 seconds | 340 active-play ticks |
-| Power Ball spawn | 30 seconds | 510 active-play ticks |
+| Power Ball after Bonus Ball caught | 20 seconds | 340 active-play ticks |
+| Energy Ball after Power Ball caught | 20 seconds | 340 active-play ticks |
 
 ## Milestone 7 Scope
 
 BUILD 007 turns enemy collision into a real arcade life cycle. Jacques starts
-with 3 lives. Touching either enemy enters a short death state: `HIT` flashes,
-input and enemy movement pause, one life is removed, and Jacques respawns at
-the starting position if any lives remain.
+with 3 lives. Touching either enemy enters a short death state: Jacques moves
+straight up at one-third normal movement speed, rotating between jump-left,
+jump-up, and jump-right sprites until he exits the top of the screen. One life
+is removed, and Jacques respawns at the starting position if any lives remain.
+Enemies and items remain frozen during the death animation and for two
+additional seconds after respawn. Respawn starts a two-second blinking grace
+period where enemy collisions are ignored once movement resumes.
 
 When the final life is lost, the game displays `GAME OVER` and stops gameplay.
 

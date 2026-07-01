@@ -26,7 +26,10 @@ StartNewGame:
         clr     LevelTransitionTimer
         clr     LevelMessageColorIndex
         clr     LevelMessageColorCounter
-        clr     DeathTimer
+        clr     DeathAnimStepPhase
+        clr     DeathSpritePhase
+        clr     RespawnWaitTimer
+        clr     PlayerGraceTimer
         lda     #START_LIVES
         sta     LivesValue
         lda     #'0'
@@ -43,6 +46,8 @@ StartNewGame:
 EnterTitleScreen:
         jsr     DrawScreenChrome
         jsr     DrawHudSidebar
+
+EnterTitleScreenNoChrome:
         jsr     DrawTitleScreen
         jsr     ResetAttractScreenTimer
         lda     #GAME_STATE_TITLE
@@ -52,6 +57,8 @@ EnterTitleScreen:
 EnterHallOfFameScreen:
         jsr     DrawScreenChrome
         jsr     DrawHudSidebar
+
+EnterHallOfFameScreenNoChrome:
         jsr     DrawHallOfFameScreen
         jsr     ResetAttractScreenTimer
         lda     #GAME_STATE_HALL_OF_FAME
@@ -125,6 +132,8 @@ RunGameFrame:
         lbeq    RunGameFramePlaying
         cmpa    #GAME_STATE_DYING
         lbeq    RunGameFrameDying
+        cmpa    #GAME_STATE_RESPAWN_WAIT
+        lbeq    RunGameFrameRespawnWait
         cmpa    #GAME_STATE_LEVEL_CLEAR
         lbeq    RunGameFrameLevelClear
         cmpa    #GAME_STATE_GET_READY
@@ -146,6 +155,7 @@ RunGameFramePlaying:
         jsr     SaveBonusItemRenderState
         jsr     SaveEnergyItemRenderState
         jsr     UpdatePlayer
+        jsr     UpdatePlayerGraceTimer
         jsr     UpdatePowerSystem
         jsr     UpdateBonusItemSystem
         jsr     UpdateEnergyItemSystem
@@ -195,7 +205,46 @@ RunGameFramePlayingWait:
 
 RunGameFrameDying:
         jsr     ReadInput
+        clr     FrameStaticDirty
+        jsr     SavePlayerRenderState
         jsr     UpdateDeathState
+        lda     GameState
+        cmpa    #GAME_STATE_DYING
+        bne     RunGameFrameDyingWait
+        jsr     ErasePlayerIfChanged
+        lda     FrameStaticDirty
+        beq     RunGameFrameDyingDrawPlayer
+        jsr     DrawStaticArena
+        jsr     DrawEnemy1All
+        jsr     DrawEnemy2
+        jsr     DrawPower
+        jsr     DrawBonusItem
+        jsr     DrawEnergyItem
+
+RunGameFrameDyingDrawPlayer:
+        jsr     DrawPlayerIfChanged
+
+RunGameFrameDyingWait:
+        jsr     WaitFrame
+        rts
+
+RunGameFrameRespawnWait:
+        jsr     ReadInput
+        clr     FrameStaticDirty
+        jsr     SavePlayerRenderState
+        jsr     UpdateRespawnWaitState
+        jsr     ErasePlayerIfChanged
+        lda     FrameStaticDirty
+        beq     RunGameFrameRespawnWaitDrawPlayer
+        jsr     DrawStaticArena
+        jsr     DrawEnemy1All
+        jsr     DrawEnemy2
+        jsr     DrawPower
+        jsr     DrawBonusItem
+        jsr     DrawEnergyItem
+
+RunGameFrameRespawnWaitDrawPlayer:
+        jsr     DrawPlayerIfChanged
         jsr     WaitFrame
         rts
 
@@ -226,14 +275,14 @@ RunGameFrameHallOfFame:
         lda     Fire_Press
         bita    #c1_button_A_mask
         beq     RunGameFrameHallOfFameTick
-        jsr     EnterTitleScreen
+        jsr     EnterTitleScreenNoChrome
         bra     RunGameFrameHallOfFameWait
 
 RunGameFrameHallOfFameTick:
         jsr     TickAttractScreenTimer
         tsta
         beq     RunGameFrameHallOfFameWait
-        jsr     EnterTitleScreen
+        jsr     EnterTitleScreenNoChrome
 
 RunGameFrameHallOfFameWait:
         jsr     WaitFrame
@@ -253,7 +302,7 @@ RunGameFrameTitleTick:
         jsr     TickAttractScreenTimer
         tsta
         beq     RunGameFrameTitleWait
-        jsr     EnterHallOfFameScreen
+        jsr     EnterHallOfFameScreenNoChrome
 
 RunGameFrameTitleWait:
         jsr     WaitFrame
@@ -276,6 +325,8 @@ SavePlayerRenderState:
         sta     PlayerPrevRow
         lda     PlayerSprite
         sta     PlayerPrevSprite
+        jsr     IsPlayerGraceBlinkVisible
+        sta     PlayerPrevGraceBlinkVisible
         rts
 
 ;------------------------------------------------------------------------------
@@ -354,6 +405,8 @@ SavePowerRenderNoFreeze:
 
 SavePowerRenderFreezeStore:
         sta     PowerPrevFreezeActive
+        jsr     IsPowerFreezeBlinkVisible
+        sta     PowerPrevFreezeBlinkVisible
         rts
 
 SaveBonusItemRenderState:
@@ -446,6 +499,10 @@ ResetPlayerForLevel:
         lda     #PLAYER_SPRITE_WALK_RIGHT
         sta     PlayerSprite
         sta     PlayerPrevSprite
+        clr     PlayerGraceTimer
+        clr     RespawnWaitTimer
+        lda     #1
+        sta     PlayerPrevGraceBlinkVisible
         lda     #1
         sta     PlayerGrounded
         rts
@@ -545,10 +602,10 @@ ResetPowerForLevel:
         clr     PowerFreezeTimer
         clr     PowerFreezeTimer+1
         clr     PowerPrevFreezeActive
-        lda     #1
-        sta     PowerSpawnArmed
-        ldd     #POWER_SPAWN_FRAMES
-        std     PowerSpawnTimer
+        clr     PowerPrevFreezeBlinkVisible
+        clr     PowerSpawnArmed
+        clr     PowerSpawnTimer
+        clr     PowerSpawnTimer+1
         lda     Enemy1SpawnSeed
         sta     PowerSeed
         rts
@@ -588,10 +645,9 @@ ResetEnergyItemForLevel:
         sta     EnergyItemRow
         sta     EnergyItemPrevRow
         clr     EnergyItemMoveCounter
-        lda     #1
-        sta     EnergyItemSpawnArmed
-        ldd     #ENERGY_ITEM_SPAWN_FRAMES
-        std     EnergyItemSpawnTimer
+        clr     EnergyItemSpawnArmed
+        clr     EnergyItemSpawnTimer
+        clr     EnergyItemSpawnTimer+1
         lda     Enemy1Phase2AiSeed
         eora    Enemy2AiSeed
         eora    BonusItemSeed
@@ -649,6 +705,14 @@ UpdatePlayer:
         jsr     TryJump
         jsr     ApplyVertical
         jsr     UpdatePlayerSprite
+        rts
+
+UpdatePlayerGraceTimer:
+        lda     PlayerGraceTimer
+        beq     UpdatePlayerGraceTimerDone
+        dec     PlayerGraceTimer
+
+UpdatePlayerGraceTimerDone:
         rts
 
 ;------------------------------------------------------------------------------
@@ -835,9 +899,10 @@ CheckPowerCollection:
         clr     PowerSpawnArmed
         ldd     #POWER_FREEZE_FRAMES
         std     PowerFreezeTimer
-        clra
-        clrb
-        std     Enemy1SpawnFrameCounter
+        lda     #1
+        sta     EnergyItemSpawnArmed
+        ldd     #ENERGY_ITEM_SPAWN_AFTER_POWER_FRAMES
+        std     EnergyItemSpawnTimer
         jsr     ForcePlayerRedraw
 
 CheckPowerCollectionDone:
@@ -1016,6 +1081,10 @@ CheckBonusItemCollection:
         clr     BonusItemSpawnArmed
         clr     BonusItemSpawnTimer
         clr     BonusItemSpawnTimer+1
+        lda     #1
+        sta     PowerSpawnArmed
+        ldd     #POWER_SPAWN_AFTER_BONUS_FRAMES
+        std     PowerSpawnTimer
         jsr     AddBonusItemScore
         jsr     ForcePlayerRedraw
 
@@ -1232,61 +1301,12 @@ AdvanceEnergyItemSeedStore:
         rts
 
 EndPowerFreeze:
-        jsr     ResetEnemySpawningAfterPower
+        jsr     RespawnEnemy2AfterPowerIfEaten
         jmp     DisablePowerSpawn
 
-ResetEnemySpawningAfterPower:
-        clra
-        clrb
-        std     Enemy1SpawnFrameCounter
-        lda     #ENEMY1_PERSONALITY_BALANCED
-        sta     Enemy1Personality
-        lda     #ENEMY1_STEP_FRAMES
-        sta     Enemy1StepFrames
-        lda     #ENEMY1_PHASE2_STEP_FRAMES
-        sta     Enemy1Phase2StepFrames
-        lda     #ENEMY1_PHASE2_CHASE_RATE
-        sta     Enemy1Phase2ChaseRate
-        jsr     StartEnemy1SpawnEffect
-
-        lda     #ENEMY1_PERSONALITY_FLANKER
-        sta     Enemy1Slot2Personality
-        lda     #ENEMY1_SLOT2_STEP_FRAMES
-        sta     Enemy1Slot2StepFrames
-        lda     #ENEMY1_SLOT2_PHASE2_STEP_FRAMES
-        sta     Enemy1Slot2Phase2StepFrames
-        lda     #ENEMY1_SLOT2_PHASE2_CHASE_RATE
-        sta     Enemy1Slot2Phase2ChaseRate
-        clr     Enemy1Slot2FrameCounter
-        clr     Enemy1Slot2SpawnTimer
-
-        lda     #ENEMY1_PERSONALITY_DRIFTER
-        sta     Enemy1Slot3Personality
-        lda     #ENEMY1_SLOT3_STEP_FRAMES
-        sta     Enemy1Slot3StepFrames
-        lda     #ENEMY1_SLOT3_PHASE2_STEP_FRAMES
-        sta     Enemy1Slot3Phase2StepFrames
-        lda     #ENEMY1_SLOT3_PHASE2_CHASE_RATE
-        sta     Enemy1Slot3Phase2ChaseRate
-        clr     Enemy1Slot3FrameCounter
-        clr     Enemy1Slot3SpawnTimer
-
-        lda     #ENEMY1_PERSONALITY_PHASE3
-        sta     Enemy1Slot4Personality
-        lda     #ENEMY1_SLOT4_STEP_FRAMES
-        sta     Enemy1Slot4StepFrames
-        lda     #ENEMY1_SLOT4_PHASE3_STEP_FRAMES
-        sta     Enemy1Slot4Phase2StepFrames
-        lda     #ENEMY1_SLOT4_PHASE3_CHASE_RATE
-        sta     Enemy1Slot4Phase2ChaseRate
-        clr     Enemy1Slot4FrameCounter
-        clr     Enemy1Slot4SpawnTimer
-
-        lda     #ENEMY1_STATE_INACTIVE
-        sta     Enemy1Slot2State
-        sta     Enemy1Slot3State
-        sta     Enemy1Slot4State
-        jsr     RespawnEnemy2
+RespawnEnemy2AfterPowerIfEaten:
+        lda     Enemy2Active
+        beq     RespawnEnemy2
         rts
 
 RespawnEnemy2:
@@ -3127,6 +3147,9 @@ AddBonusItemScore:
 ;   A
 ;------------------------------------------------------------------------------
 CheckEnemyCollision:
+        lda     PlayerGraceTimer
+        lbne    CheckEnemyCollisionDone
+
         lda     Enemy1State
         cmpa    #ENEMY1_STATE_INACTIVE
         beq     CheckEnemyCollisionEnemy1Slot2
@@ -3310,8 +3333,16 @@ HandleEnemyHit:
 
         lda     #GAME_STATE_DYING
         sta     GameState
-        lda     #DEATH_PAUSE_FRAMES
-        sta     DeathTimer
+        clr     DeathAnimStepPhase
+        clr     DeathSpritePhase
+        clr     PlayerGraceTimer
+        clr     PlayerDY
+        clr     PlayerFallCounter
+        clr     PlayerMoveX
+        clr     PlayerGrounded
+        clr     PlayerLandingPose
+        lda     #PLAYER_SPRITE_UP_LEFT
+        sta     PlayerSprite
 
         lda     InfiniteLivesFlag
         bne     HandleEnemyHitNoLifeDec
@@ -3331,24 +3362,99 @@ HandleEnemyHitDone:
 ; UpdateDeathState
 ;
 ; Purpose:
-;   Waits briefly after a hit, then either respawns Jacques or shows game over.
+;   Animates Jacques straight up until he exits the top of the screen, then
+;   either respawns him or shows game over.
 ;
 ; Modified:
 ;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 UpdateDeathState:
-        lda     DeathTimer
+        jsr     ShouldAdvanceDeathAnim
+        beq     UpdateDeathStateDone
+
+        clr     PlayerMoveX
+        clr     PlayerDY
+        clr     PlayerGrounded
+        clr     PlayerLandingPose
+        jsr     AdvanceDeathSprite
+
+        lda     PlayerRow
         beq     UpdateDeathStateResolve
-        dec     DeathTimer
-        bne     UpdateDeathStateDone
+        dec     PlayerRow
+        rts
 
 UpdateDeathStateResolve:
         lda     LivesValue
-        beq     EnterGameOver
+        lbeq    EnterGameOver
         jsr     RespawnPlayer
         bra     UpdateDeathStateDone
 
 UpdateDeathStateDone:
+        rts
+
+UpdateRespawnWaitState:
+        lda     RespawnWaitTimer
+        beq     UpdateRespawnWaitResume
+        dec     RespawnWaitTimer
+        bne     UpdateRespawnWaitDone
+
+UpdateRespawnWaitResume:
+        lda     #PLAYER_RESPAWN_GRACE_FRAMES
+        sta     PlayerGraceTimer
+        clr     GameState
+
+UpdateRespawnWaitDone:
+        rts
+
+ShouldAdvanceDeathAnim:
+        lda     DeathAnimStepPhase
+        cmpa    #DEATH_ANIM_STEP_MOVE_PHASE
+        bne     ShouldAdvanceDeathAnimSkip
+
+        jsr     AdvanceDeathAnimStepPhase
+        lda     #1
+        rts
+
+ShouldAdvanceDeathAnimSkip:
+        jsr     AdvanceDeathAnimStepPhase
+        clra
+        rts
+
+AdvanceDeathAnimStepPhase:
+        inc     DeathAnimStepPhase
+        lda     DeathAnimStepPhase
+        cmpa    #DEATH_ANIM_STEP_PHASE_COUNT
+        blo     AdvanceDeathAnimStepPhaseDone
+        clr     DeathAnimStepPhase
+
+AdvanceDeathAnimStepPhaseDone:
+        rts
+
+AdvanceDeathSprite:
+        lda     DeathSpritePhase
+        beq     AdvanceDeathSpriteUseLeft
+        cmpa    #1
+        beq     AdvanceDeathSpriteUseUp
+
+        lda     #PLAYER_SPRITE_UP_RIGHT
+        bra     AdvanceDeathSpriteStore
+
+AdvanceDeathSpriteUseLeft:
+        lda     #PLAYER_SPRITE_UP_LEFT
+        bra     AdvanceDeathSpriteStore
+
+AdvanceDeathSpriteUseUp:
+        lda     #PLAYER_SPRITE_UP
+
+AdvanceDeathSpriteStore:
+        sta     PlayerSprite
+        inc     DeathSpritePhase
+        lda     DeathSpritePhase
+        cmpa    #DEATH_ANIM_SPRITE_PHASE_COUNT
+        blo     AdvanceDeathSpriteDone
+        clr     DeathSpritePhase
+
+AdvanceDeathSpriteDone:
         rts
 
 ;------------------------------------------------------------------------------
@@ -3361,6 +3467,9 @@ UpdateDeathStateDone:
 ;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 RespawnPlayer:
+        lda     PlayerPrevCol
+        ldb     PlayerPrevRow
+        jsr     ErasePlayerAtAB
         lda     PlayerCol
         ldb     PlayerRow
         jsr     ErasePlayerAtAB
@@ -3389,8 +3498,14 @@ RespawnPlayer:
         lda     #PLAYER_SPRITE_WALK_RIGHT
         sta     PlayerSprite
         sta     PlayerPrevSprite
+        clr     PlayerGraceTimer
+        lda     #RESPAWN_WAIT_FRAMES
+        sta     RespawnWaitTimer
+        lda     #1
+        sta     PlayerPrevGraceBlinkVisible
         jsr     DrawPlayer
-        clr     GameState
+        lda     #GAME_STATE_RESPAWN_WAIT
+        sta     GameState
         rts
 
 ;------------------------------------------------------------------------------
@@ -3403,6 +3518,9 @@ RespawnPlayer:
 ;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 EnterGameOver:
+        lda     PlayerPrevCol
+        ldb     PlayerPrevRow
+        jsr     ErasePlayerAtAB
         lda     PlayerCol
         ldb     PlayerRow
         jsr     ErasePlayerAtAB
@@ -5104,11 +5222,31 @@ IsPowerFreezeRenderInactive:
 IsPowerFreezeRenderCompare:
         cmpa    PowerPrevFreezeActive
         bne     IsPowerFreezeRenderYes
+        jsr     IsPowerFreezeBlinkVisible
+        cmpa    PowerPrevFreezeBlinkVisible
+        bne     IsPowerFreezeRenderYes
         clra
         rts
 
 IsPowerFreezeRenderYes:
         lda     #1
+        rts
+
+IsPowerFreezeBlinkVisible:
+        ldd     PowerFreezeTimer
+        beq     IsPowerFreezeBlinkHidden
+        cmpd    #POWER_FREEZE_BLINK_FRAMES
+        bhi     IsPowerFreezeBlinkShown
+        lda     PowerFreezeTimer+1
+        bita    #POWER_FREEZE_BLINK_MASK
+        bne     IsPowerFreezeBlinkHidden
+
+IsPowerFreezeBlinkShown:
+        lda     #1
+        rts
+
+IsPowerFreezeBlinkHidden:
+        clra
         rts
 
 DrawEnemyIfChanged:
@@ -5322,6 +5460,12 @@ DrawEnergyItemDone:
         rts
 
 ErasePlayerIfChanged:
+        lda     PlayerPrevGraceBlinkVisible
+        beq     ErasePlayerUnchanged
+        jsr     IsPlayerGraceBlinkVisible
+        cmpa    PlayerPrevGraceBlinkVisible
+        bne     ErasePlayerChanged
+
         lda     PlayerCol
         cmpa    PlayerPrevCol
         bne     ErasePlayerChanged
@@ -5333,6 +5477,8 @@ ErasePlayerIfChanged:
         lda     PlayerSprite
         cmpa    PlayerPrevSprite
         bne     ErasePlayerChanged
+
+ErasePlayerUnchanged:
         rts
 
 ErasePlayerChanged:
@@ -5342,6 +5488,11 @@ ErasePlayerChanged:
         jmp     MarkStaticRedraw
 
 DrawPlayerIfChanged:
+        jsr     IsPlayerGraceBlinkVisible
+        beq     DrawPlayerUnchanged
+        cmpa    PlayerPrevGraceBlinkVisible
+        bne     DrawPlayer
+
         lda     FrameStaticDirty
         bne     DrawPlayer
         lda     PlayerCol
@@ -5355,12 +5506,32 @@ DrawPlayerIfChanged:
         lda     PlayerSprite
         cmpa    PlayerPrevSprite
         bne     DrawPlayer
+
+DrawPlayerUnchanged:
         rts
 
 DrawPlayer:
+        jsr     IsPlayerGraceBlinkVisible
+        beq     DrawPlayerDone
         lda     PlayerCol
         ldb     PlayerRow
         jsr     DrawPlayerAtAB
+
+DrawPlayerDone:
+        rts
+
+IsPlayerGraceBlinkVisible:
+        lda     PlayerGraceTimer
+        beq     IsPlayerGraceBlinkShown
+        bita    #PLAYER_GRACE_BLINK_MASK
+        bne     IsPlayerGraceBlinkHidden
+
+IsPlayerGraceBlinkShown:
+        lda     #1
+        rts
+
+IsPlayerGraceBlinkHidden:
+        clra
         rts
 
 ErasePlayer:
@@ -5374,23 +5545,37 @@ ErasePlayerAtAB:
         stb     DrawObjectRow
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
+        jsr     RestorePlayerCellAtAB
 
         lda     DrawObjectCol
         inca
         ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
+        jsr     RestorePlayerCellAtAB
 
         lda     DrawObjectCol
         ldb     DrawObjectRow
         incb
-        jsr     DrawEmptyAtAB
+        jsr     RestorePlayerCellAtAB
 
         lda     DrawObjectCol
         inca
         ldb     DrawObjectRow
         incb
+        jmp     RestorePlayerCellAtAB
+
+RestorePlayerCellAtAB:
+        cmpb    #ARENA_TOP_ROW
+        blo     RestorePlayerCellBorder
+        cmpb    #FLOOR_ROW
+        bhs     RestorePlayerCellBorder
+        cmpa    #ARENA_LEFT_COL
+        blo     RestorePlayerCellBorder
+        cmpa    #ARENA_RIGHT_COL
+        bhi     RestorePlayerCellBorder
         jmp     DrawEmptyAtAB
+
+RestorePlayerCellBorder:
+        jmp     DrawBorderEmptyAtAB
 
 DrawEmptyAtAB:
         pshs    a,b
@@ -5468,10 +5653,15 @@ DrawEnemyAtAB:
         stb     DrawObjectRow
         ldd     PowerFreezeTimer
         beq     DrawEnemyNormal
+        jsr     IsPowerFreezeBlinkVisible
+        beq     DrawEnemyFrozenHidden
         lda     #COLOR_FROZEN
         sta     DrawCellColor
         ldu     #CellEnemyFrozen
         bra     DrawEnemyCells
+
+DrawEnemyFrozenHidden:
+        rts
 
 DrawEnemyNormal:
         lda     #COLOR_ENEMY
@@ -5542,10 +5732,15 @@ DrawEnemy2AtAB:
         stb     DrawObjectRow
         ldd     PowerFreezeTimer
         beq     DrawEnemy2Normal
+        jsr     IsPowerFreezeBlinkVisible
+        beq     DrawEnemy2FrozenHidden
         lda     #COLOR_FROZEN
         sta     DrawCellColor
         ldu     #CellEnemyFrozen
         bra     DrawEnemy2Cells
+
+DrawEnemy2FrozenHidden:
+        rts
 
 DrawEnemy2Normal:
         lda     #COLOR_ENEMY2
@@ -6917,6 +7112,10 @@ PlayerPrevRow:
         fcb     PLAYER_START_ROW
 PlayerPrevSprite:
         fcb     PLAYER_SPRITE_WALK_RIGHT
+PlayerGraceTimer:
+        fcb     0
+PlayerPrevGraceBlinkVisible:
+        fcb     1
 Enemy1Col:
         fcb     ENEMY1_START_COL
 Enemy1Row:
@@ -7125,6 +7324,8 @@ PowerFreezeTimer:
         fdb     0
 PowerPrevFreezeActive:
         fcb     0
+PowerPrevFreezeBlinkVisible:
+        fcb     0
 PowerSeed:
         fcb     ENEMY1_SPAWN_SEED
 BonusItemActive:
@@ -7172,7 +7373,7 @@ EnergyItemMoveCounter:
 EnergyItemSpawnArmed:
         fcb     0
 EnergyItemSpawnTimer:
-        fdb     ENERGY_ITEM_SPAWN_FRAMES
+        fdb     0
 EnergyItemSeed:
         fcb     $B5
 CurrentLevel:
@@ -7225,7 +7426,11 @@ LivesValue:
         fcb     START_LIVES
 GameState:
         fcb     GAME_STATE_PLAYING
-DeathTimer:
+DeathAnimStepPhase:
+        fcb     0
+DeathSpritePhase:
+        fcb     0
+RespawnWaitTimer:
         fcb     0
 LevelTransitionTimer:
         fcb     0
