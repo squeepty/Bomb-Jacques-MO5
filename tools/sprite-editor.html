@@ -105,6 +105,34 @@
       background: var(--danger);
     }
 
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-top: 12px;
+      padding: 3px;
+      border: 1px solid #2c3032;
+      border-radius: 6px;
+      background: #151719;
+    }
+
+    .mode-tab {
+      height: 30px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--panel-text);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .mode-tab.selected {
+      border-color: #151515;
+      background: var(--yellow);
+      color: var(--ink);
+    }
+
     .sprite-list {
       flex: 1 1 auto;
       min-height: 0;
@@ -150,6 +178,10 @@
       image-rendering: pixelated;
       border: 1px solid #343434;
       background: var(--cyan);
+    }
+
+    .sprite-preview.sidebar-art-list-preview {
+      height: 72px;
     }
 
     .sprite-name {
@@ -198,8 +230,40 @@
 
     .actions {
       display: flex;
+      align-items: center;
       gap: 8px;
       flex: 0 0 auto;
+    }
+
+    .edit-tools {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid #60686b;
+      border-radius: 6px;
+      background: #1e2225;
+    }
+
+    .tool-button {
+      min-width: 58px;
+      height: 30px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--panel-text);
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    .tool-button.selected {
+      border-color: #151515;
+      background: var(--cyan-soft);
+      color: var(--ink);
+    }
+
+    .tool-button:disabled {
+      opacity: 0.45;
+      cursor: default;
     }
 
     .action-button {
@@ -261,6 +325,16 @@
       background: transparent;
     }
 
+    .real-preview-shell.sidebar-art-preview-shell {
+      width: 96px;
+      height: 216px;
+    }
+
+    .real-preview.sidebar-art-preview {
+      width: 56px;
+      height: 128px;
+    }
+
     .pixel-grid {
       width: min(calc(100vh - 128px), calc(100vw - 488px), 680px);
       min-width: min(320px, calc(100vw - 456px));
@@ -270,6 +344,16 @@
       grid-template-rows: repeat(16, minmax(0, 1fr));
       border: 2px solid var(--ink);
       background: var(--ink);
+      touch-action: none;
+      user-select: none;
+    }
+
+    .pixel-grid.sidebar-art-grid {
+      width: min(calc((100vh - 128px) * 0.4375), calc(100vw - 488px), 340px);
+      min-width: min(224px, calc(100vw - 456px));
+      aspect-ratio: 7 / 16;
+      grid-template-columns: repeat(56, minmax(0, 1fr));
+      grid-template-rows: repeat(128, minmax(0, 1fr));
     }
 
     .pixel {
@@ -279,7 +363,7 @@
       border-right: 1px solid rgba(17, 18, 20, 0.28);
       border-bottom: 1px solid rgba(17, 18, 20, 0.28);
       background: var(--cyan-soft);
-      cursor: pointer;
+      cursor: crosshair;
       padding: 0;
     }
 
@@ -298,6 +382,10 @@
     .pixel:hover {
       outline: 2px solid var(--yellow);
       outline-offset: -2px;
+    }
+
+    .pixel-grid[data-tool="erase"] .pixel {
+      cursor: cell;
     }
 
     .empty-state {
@@ -344,8 +432,18 @@
         height: 64px;
       }
 
+      .real-preview-shell.sidebar-art-preview-shell {
+        width: 84px;
+        height: 192px;
+      }
+
       .pixel-grid {
         width: min(calc(100vh - 420px), 92vw, 560px);
+        min-width: 0;
+      }
+
+      .pixel-grid.sidebar-art-grid {
+        width: min(calc((100vh - 420px) * 0.4375), 76vw, 300px);
         min-width: 0;
       }
     }
@@ -357,6 +455,10 @@
       <div class="panel-head">
         <h1>Sprite Editor</h1>
         <div id="status" class="status busy">Loading</div>
+        <div class="mode-tabs" role="tablist" aria-label="Editor mode">
+          <button id="spritesTab" class="mode-tab selected" type="button" role="tab" aria-selected="true">Sprites</button>
+          <button id="sidebarArtTab" class="mode-tab" type="button" role="tab" aria-selected="false">Right Panel</button>
+        </div>
       </div>
       <div id="spriteList" class="sprite-list" role="listbox" aria-label="Sprites"></div>
     </aside>
@@ -368,6 +470,10 @@
           <div id="selectedLabels" class="selected-labels"></div>
         </div>
         <div class="actions">
+          <div class="edit-tools" role="group" aria-label="Pixel tool">
+            <button id="drawToolButton" class="tool-button selected" type="button" aria-pressed="true" title="Draw pixels">Draw</button>
+            <button id="eraseToolButton" class="tool-button" type="button" aria-pressed="false" title="Erase pixels">Erase</button>
+          </div>
           <button id="undoButton" class="action-button" type="button" disabled>Undo</button>
           <button id="saveButton" class="action-button primary" type="button" disabled>Save</button>
         </div>
@@ -388,19 +494,32 @@
     const spriteList = document.getElementById("spriteList");
     const pixelGrid = document.getElementById("pixelGrid");
     const realPreview = document.getElementById("realPreview");
+    const realPreviewShell = document.querySelector(".real-preview-shell");
     const selectedTitle = document.getElementById("selectedTitle");
     const selectedLabels = document.getElementById("selectedLabels");
+    const spritesTab = document.getElementById("spritesTab");
+    const sidebarArtTab = document.getElementById("sidebarArtTab");
+    const drawToolButton = document.getElementById("drawToolButton");
+    const eraseToolButton = document.getElementById("eraseToolButton");
     const undoButton = document.getElementById("undoButton");
     const saveButton = document.getElementById("saveButton");
     const statusEl = document.getElementById("status");
 
+    const MODE_SPRITES = "sprites";
+    const MODE_SIDEBAR_ART = "sidebar-art";
+
     const state = {
+      mode: MODE_SPRITES,
       sprites: [],
+      sidebarArt: null,
       selectedId: null,
       pixels: Array(256).fill(false),
       savedRows: [],
       dirty: false,
       saving: false,
+      tool: "draw",
+      painting: false,
+      paintValue: true,
     };
 
     function setStatus(text, tone = "") {
@@ -410,6 +529,18 @@
 
     function selectedSprite() {
       return state.sprites.find((sprite) => sprite.id === state.selectedId) || null;
+    }
+
+    function hasEditableSelection() {
+      return state.mode === MODE_SPRITES ? Boolean(selectedSprite()) : Boolean(state.sidebarArt);
+    }
+
+    function currentWidth() {
+      return state.mode === MODE_SIDEBAR_ART ? state.sidebarArt?.width ?? 56 : 16;
+    }
+
+    function currentHeight() {
+      return state.mode === MODE_SIDEBAR_ART ? state.sidebarArt?.height ?? 128 : 16;
     }
 
     function rowsToPixels(rows) {
@@ -439,6 +570,39 @@
       return rows;
     }
 
+    function sidebarRowsToPixels(rows, art) {
+      const pixels = Array(art.width * art.height).fill(false);
+      for (let y = 0; y < art.height; y += 1) {
+        for (let x = 0; x < art.width; x += 1) {
+          const row = rows[y * art.bytesPerRow + Math.floor(x / 8)];
+          pixels[y * art.width + x] = Boolean(row & (1 << (7 - (x % 8))));
+        }
+      }
+      return pixels;
+    }
+
+    function sidebarPixelsToRows(pixels, art) {
+      const rows = Array(art.height * art.bytesPerRow).fill(0);
+      for (let y = 0; y < art.height; y += 1) {
+        for (let x = 0; x < art.width; x += 1) {
+          if (!pixels[y * art.width + x]) {
+            continue;
+          }
+          const index = y * art.bytesPerRow + Math.floor(x / 8);
+          rows[index] |= 1 << (7 - (x % 8));
+        }
+      }
+      return rows;
+    }
+
+    function currentRowsFromPixels() {
+      return state.mode === MODE_SIDEBAR_ART ? sidebarPixelsToRows(state.pixels, state.sidebarArt) : pixelsToRows(state.pixels);
+    }
+
+    function currentPixelsFromRows(rows) {
+      return state.mode === MODE_SIDEBAR_ART ? sidebarRowsToPixels(rows, state.sidebarArt) : rowsToPixels(rows);
+    }
+
     function rowsEqual(left, right) {
       return left.length === right.length && left.every((value, index) => value === right[index]);
     }
@@ -461,24 +625,85 @@
       }
     }
 
-    function drawRealPreview() {
-      const context = realPreview.getContext("2d");
-      realPreview.width = 16;
-      realPreview.height = 16;
+    function drawSidebarArtPreview(canvas, art, rows) {
+      const context = canvas.getContext("2d");
+      const pixels = sidebarRowsToPixels(rows, art);
+      canvas.width = art.width;
+      canvas.height = art.height;
       context.imageSmoothingEnabled = false;
-      context.clearRect(0, 0, 16, 16);
+      context.fillStyle = "#aef2f5";
+      context.fillRect(0, 0, art.width, art.height);
       context.fillStyle = "#111214";
-      for (let y = 0; y < 16; y += 1) {
-        for (let x = 0; x < 16; x += 1) {
-          if (state.pixels[y * 16 + x]) {
+      for (let y = 0; y < art.height; y += 1) {
+        for (let x = 0; x < art.width; x += 1) {
+          if (pixels[y * art.width + x]) {
             context.fillRect(x, y, 1, 1);
           }
         }
       }
     }
 
+    function drawRealPreview() {
+      const context = realPreview.getContext("2d");
+      const width = currentWidth();
+      const height = currentHeight();
+      realPreview.width = width;
+      realPreview.height = height;
+      realPreview.classList.toggle("sidebar-art-preview", state.mode === MODE_SIDEBAR_ART);
+      realPreviewShell.classList.toggle("sidebar-art-preview-shell", state.mode === MODE_SIDEBAR_ART);
+      context.imageSmoothingEnabled = false;
+      context.fillStyle = "#aef2f5";
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = "#111214";
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (state.pixels[y * width + x]) {
+            context.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    function renderModeTabs() {
+      const spritesSelected = state.mode === MODE_SPRITES;
+      spritesTab.classList.toggle("selected", spritesSelected);
+      sidebarArtTab.classList.toggle("selected", !spritesSelected);
+      spritesTab.setAttribute("aria-selected", spritesSelected ? "true" : "false");
+      sidebarArtTab.setAttribute("aria-selected", spritesSelected ? "false" : "true");
+    }
+
     function renderList() {
       spriteList.replaceChildren();
+      spriteList.setAttribute("aria-label", state.mode === MODE_SPRITES ? "Sprites" : "Right panel art");
+
+      if (state.mode === MODE_SIDEBAR_ART) {
+        if (!state.sidebarArt) {
+          spriteList.innerHTML = "<div class=\"empty-state\">No art loaded</div>";
+          return;
+        }
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "sprite-item selected";
+        button.dataset.id = state.sidebarArt.id;
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", "true");
+        button.classList.toggle("dirty", state.dirty);
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "sprite-preview sidebar-art-list-preview";
+        canvas.setAttribute("aria-hidden", "true");
+        drawSidebarArtPreview(canvas, state.sidebarArt, state.dirty ? currentRowsFromPixels() : state.sidebarArt.rows);
+
+        const name = document.createElement("span");
+        name.className = "sprite-name";
+        name.textContent = state.sidebarArt.name;
+
+        button.append(canvas, name);
+        spriteList.append(button);
+        return;
+      }
+
       state.sprites.forEach((sprite) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -507,11 +732,28 @@
       });
     }
 
+    function updateToolButtons() {
+      const hasSelection = hasEditableSelection();
+      pixelGrid.dataset.tool = state.tool;
+      drawToolButton.classList.toggle("selected", state.tool === "draw");
+      eraseToolButton.classList.toggle("selected", state.tool === "erase");
+      drawToolButton.setAttribute("aria-pressed", state.tool === "draw" ? "true" : "false");
+      eraseToolButton.setAttribute("aria-pressed", state.tool === "erase" ? "true" : "false");
+      drawToolButton.disabled = !hasSelection || state.saving;
+      eraseToolButton.disabled = !hasSelection || state.saving;
+    }
+
     function renderGrid() {
+      const width = currentWidth();
+      const height = currentHeight();
       pixelGrid.replaceChildren();
-      for (let y = 0; y < 16; y += 1) {
-        for (let x = 0; x < 16; x += 1) {
-          const index = y * 16 + x;
+      pixelGrid.classList.toggle("sidebar-art-grid", state.mode === MODE_SIDEBAR_ART);
+      pixelGrid.style.gridTemplateColumns = `repeat(${width}, minmax(0, 1fr))`;
+      pixelGrid.style.gridTemplateRows = `repeat(${height}, minmax(0, 1fr))`;
+      pixelGrid.setAttribute("aria-label", state.mode === MODE_SIDEBAR_ART ? "Right panel art pixel grid" : "2 by 2 sprite pixel grid");
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          const index = y * width + x;
           const pixel = document.createElement("button");
           pixel.type = "button";
           pixel.className = "pixel";
@@ -520,10 +762,10 @@
           if (state.pixels[index]) {
             pixel.classList.add("on");
           }
-          if (x === 8) {
+          if (x > 0 && x % 8 === 0) {
             pixel.classList.add("split-x");
           }
-          if (y === 8) {
+          if (y > 0 && y % 8 === 0) {
             pixel.classList.add("split-y");
           }
           pixelGrid.append(pixel);
@@ -531,7 +773,98 @@
       }
     }
 
+    function selectedListButton() {
+      if (state.mode === MODE_SIDEBAR_ART) {
+        return spriteList.querySelector("[data-id=\"sidebar-art\"]");
+      }
+
+      if (!state.selectedId) {
+        return null;
+      }
+
+      return [...spriteList.querySelectorAll(".sprite-item")].find((item) => item.dataset.id === state.selectedId) || null;
+    }
+
+    function refreshSelectedListPreview() {
+      const button = selectedListButton();
+      if (!button) {
+        return;
+      }
+
+      button.classList.toggle("dirty", state.dirty);
+      const canvas = button.querySelector(".sprite-preview");
+      if (canvas && state.mode === MODE_SIDEBAR_ART) {
+        drawSidebarArtPreview(canvas, state.sidebarArt, currentRowsFromPixels());
+      } else if (canvas) {
+        drawPreview(canvas, pixelsToRows(state.pixels));
+      }
+    }
+
+    function refreshEditState() {
+      state.dirty = !rowsEqual(currentRowsFromPixels(), state.savedRows);
+      undoButton.disabled = !state.dirty || state.saving;
+      saveButton.disabled = !state.dirty || state.saving;
+      updateToolButtons();
+      drawRealPreview();
+      refreshSelectedListPreview();
+    }
+
+    function setPixel(index, value) {
+      if (index < 0 || index >= state.pixels.length || state.pixels[index] === value) {
+        return;
+      }
+
+      state.pixels[index] = value;
+      const pixel = pixelGrid.querySelector("[data-index=\"" + index + "\"]");
+      if (pixel) {
+        pixel.classList.toggle("on", value);
+      }
+      refreshEditState();
+    }
+
+    function pixelIndexFromPointer(event) {
+      const rect = pixelGrid.getBoundingClientRect();
+      const width = currentWidth();
+      const height = currentHeight();
+      const x = Math.floor(((event.clientX - rect.left) / rect.width) * width);
+      const y = Math.floor(((event.clientY - rect.top) / rect.height) * height);
+      if (x < 0 || x >= width || y < 0 || y >= height) {
+        return null;
+      }
+      return y * width + x;
+    }
+
+    function paintFromPointer(event) {
+      const index = pixelIndexFromPointer(event);
+      if (index !== null) {
+        setPixel(index, state.paintValue);
+      }
+    }
+
     function renderSelection() {
+      if (state.mode === MODE_SIDEBAR_ART) {
+        if (!state.sidebarArt) {
+          selectedTitle.textContent = "No Art";
+          selectedLabels.textContent = "";
+          undoButton.disabled = true;
+          saveButton.disabled = true;
+          state.pixels = [];
+          drawRealPreview();
+          pixelGrid.innerHTML = "<div class=\"empty-state\">No art loaded</div>";
+          updateToolButtons();
+          return;
+        }
+
+        selectedTitle.textContent = state.sidebarArt.name;
+        selectedLabels.textContent = state.sidebarArt.label + " / " + state.sidebarArt.width + "x" + state.sidebarArt.height;
+        undoButton.disabled = !state.dirty || state.saving;
+        saveButton.disabled = !state.dirty || state.saving;
+        updateToolButtons();
+        drawRealPreview();
+        renderGrid();
+        return;
+      }
+
       const sprite = selectedSprite();
       if (!sprite) {
         selectedTitle.textContent = "No Sprite";
@@ -541,6 +874,7 @@
         state.pixels = Array(256).fill(false);
         drawRealPreview();
         pixelGrid.innerHTML = "<div class=\"empty-state\">No sprite selected</div>";
+        updateToolButtons();
         return;
       }
 
@@ -548,22 +882,27 @@
       selectedLabels.textContent = sprite.labels.join(" / ");
       undoButton.disabled = !state.dirty || state.saving;
       saveButton.disabled = !state.dirty || state.saving;
+      updateToolButtons();
       drawRealPreview();
       renderGrid();
     }
 
     function render() {
+      renderModeTabs();
       renderList();
       renderSelection();
     }
 
     function setDirtyFromPixels() {
-      state.dirty = !rowsEqual(pixelsToRows(state.pixels), state.savedRows);
-      render();
+      refreshEditState();
+    }
+
+    function confirmDiscardDirty() {
+      return !state.dirty || window.confirm("Discard unsaved pixel edits?");
     }
 
     function selectSprite(id) {
-      if (state.dirty && !window.confirm("Discard unsaved sprite edits?")) {
+      if (state.mode === MODE_SPRITES && !confirmDiscardDirty()) {
         return;
       }
 
@@ -579,15 +918,65 @@
       render();
     }
 
-    async function loadSprites() {
-      setStatus("Loading", "busy");
-      const response = await fetch("/api/sprites");
-      if (!response.ok) {
-        throw new Error((await response.json()).error || "Unable to load sprites");
+    function selectSidebarArt() {
+      if (state.mode === MODE_SIDEBAR_ART && !confirmDiscardDirty()) {
+        return;
       }
 
-      const payload = await response.json();
-      state.sprites = payload.sprites;
+      if (!state.sidebarArt) {
+        return;
+      }
+
+      state.savedRows = state.sidebarArt.rows.slice();
+      state.pixels = sidebarRowsToPixels(state.sidebarArt.rows, state.sidebarArt);
+      state.dirty = false;
+      render();
+    }
+
+    function switchMode(mode) {
+      if (mode === state.mode) {
+        return;
+      }
+
+      if (!confirmDiscardDirty()) {
+        return;
+      }
+
+      state.mode = mode;
+      state.dirty = false;
+      state.painting = false;
+      if (state.mode === MODE_SPRITES) {
+        const sprite = selectedSprite() || state.sprites[0];
+        if (sprite) {
+          state.selectedId = sprite.id;
+          state.savedRows = sprite.rows.slice();
+          state.pixels = rowsToPixels(sprite.rows);
+        }
+      } else if (state.sidebarArt) {
+        state.savedRows = state.sidebarArt.rows.slice();
+        state.pixels = sidebarRowsToPixels(state.sidebarArt.rows, state.sidebarArt);
+      }
+      render();
+      setStatus("Ready", "ok");
+    }
+
+    async function loadEditorData() {
+      setStatus("Loading", "busy");
+      const [spritesResponse, artResponse] = await Promise.all([
+        fetch("/api/sprites"),
+        fetch("/api/sidebar-art"),
+      ]);
+      if (!spritesResponse.ok) {
+        throw new Error((await spritesResponse.json()).error || "Unable to load sprites");
+      }
+      if (!artResponse.ok) {
+        throw new Error((await artResponse.json()).error || "Unable to load right panel art");
+      }
+
+      const spritePayload = await spritesResponse.json();
+      const artPayload = await artResponse.json();
+      state.sprites = spritePayload.sprites;
+      state.sidebarArt = artPayload.art;
       if (state.sprites.length > 0) {
         selectSprite(state.sprites[0].id);
       } else {
@@ -630,36 +1019,148 @@
       }
     }
 
+    async function saveSidebarArt() {
+      if (!state.sidebarArt || !state.dirty || state.saving) {
+        return;
+      }
+
+      state.saving = true;
+      renderSelection();
+      setStatus("Saving", "busy");
+
+      try {
+        const response = await fetch("/api/sidebar-art", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ rows: currentRowsFromPixels() }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to save right panel art");
+        }
+
+        state.sidebarArt = payload.art;
+        state.savedRows = payload.art.rows.slice();
+        state.pixels = sidebarRowsToPixels(payload.art.rows, payload.art);
+        state.dirty = false;
+        setStatus(payload.build && payload.build.ok ? "Saved and rebuilt" : "Saved, build failed", payload.build && payload.build.ok ? "ok" : "error");
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        state.saving = false;
+        render();
+      }
+    }
+
+    function saveCurrent() {
+      if (state.mode === MODE_SIDEBAR_ART) {
+        saveSidebarArt();
+        return;
+      }
+      saveSprite();
+    }
+
     spriteList.addEventListener("click", (event) => {
       const item = event.target.closest(".sprite-item");
-      if (item) {
+      if (!item) {
+        return;
+      }
+
+      if (state.mode === MODE_SIDEBAR_ART) {
+        selectSidebarArt();
+      } else {
         selectSprite(item.dataset.id);
       }
     });
 
-    pixelGrid.addEventListener("click", (event) => {
-      const pixel = event.target.closest(".pixel");
-      if (!pixel || !selectedSprite()) {
+    spritesTab.addEventListener("click", () => {
+      switchMode(MODE_SPRITES);
+    });
+
+    sidebarArtTab.addEventListener("click", () => {
+      switchMode(MODE_SIDEBAR_ART);
+    });
+
+    drawToolButton.addEventListener("click", () => {
+      state.tool = "draw";
+      updateToolButtons();
+    });
+
+    eraseToolButton.addEventListener("click", () => {
+      state.tool = "erase";
+      updateToolButtons();
+    });
+
+    pixelGrid.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    pixelGrid.addEventListener("pointerdown", (event) => {
+      if (!hasEditableSelection() || state.saving) {
         return;
       }
-      const index = Number(pixel.dataset.index);
-      state.pixels[index] = !state.pixels[index];
-      setDirtyFromPixels();
+
+      const index = pixelIndexFromPointer(event);
+      if (index === null) {
+        return;
+      }
+
+      event.preventDefault();
+      pixelGrid.setPointerCapture(event.pointerId);
+      state.painting = true;
+      state.paintValue = !(event.button === 2 || event.altKey || state.tool === "erase");
+      setPixel(index, state.paintValue);
+    });
+
+    pixelGrid.addEventListener("pointermove", (event) => {
+      if (!state.painting || !hasEditableSelection() || state.saving) {
+        return;
+      }
+      event.preventDefault();
+      paintFromPointer(event);
+    });
+
+    pixelGrid.addEventListener("pointerup", (event) => {
+      if (state.painting) {
+        state.painting = false;
+        if (pixelGrid.hasPointerCapture(event.pointerId)) {
+          pixelGrid.releasePointerCapture(event.pointerId);
+        }
+      }
+    });
+
+    pixelGrid.addEventListener("pointercancel", (event) => {
+      state.painting = false;
+      if (pixelGrid.hasPointerCapture(event.pointerId)) {
+        pixelGrid.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    pixelGrid.addEventListener("click", (event) => {
+      if (event.detail !== 0 || !hasEditableSelection() || state.saving) {
+        return;
+      }
+
+      const pixel = event.target.closest(".pixel");
+      if (!pixel) {
+        return;
+      }
+      setPixel(Number(pixel.dataset.index), state.tool === "draw");
     });
 
     undoButton.addEventListener("click", () => {
-      if (!selectedSprite()) {
+      if (!hasEditableSelection()) {
         return;
       }
-      state.pixels = rowsToPixels(state.savedRows);
+      state.pixels = currentPixelsFromRows(state.savedRows);
       state.dirty = false;
       render();
       setStatus("Ready", "ok");
     });
 
-    saveButton.addEventListener("click", saveSprite);
+    saveButton.addEventListener("click", saveCurrent);
 
-    loadSprites().catch((error) => {
+    loadEditorData().catch((error) => {
       setStatus(error.message, "error");
       render();
     });

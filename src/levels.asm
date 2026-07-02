@@ -37,7 +37,7 @@ Level1Platforms:
         fcb     7,18,9
 
 Level2Platforms:
-        fcb     18,4,7
+        fcb     19,4,7
         fcb     20,19,10
         fcb     14,5,8
         fcb     11,16,9
@@ -45,7 +45,7 @@ Level2Platforms:
 
 Level3Platforms:
         fcb     21,18,8
-        fcb     20,18,6
+        fcb     18,17,6
         fcb     15,4,5
         fcb     11,20,8
         fcb     7,8,7
@@ -66,7 +66,7 @@ Level5Platforms:
 
 Level6Platforms:
         fcb     21,23,6
-        fcb     20,18,7
+        fcb     18,18,7
         fcb     15,5,8
         fcb     12,20,7
         fcb     8,17,6
@@ -133,8 +133,8 @@ Level2BombPositions:
         fcb     12,12
         fcb     8,12
         fcb     4,12
-        fcb     6,16
-        fcb     10,16
+        fcb     6,17
+        fcb     10,17
         fcb     14,20
         fcb     22,21
         fcb     27,21
@@ -144,7 +144,7 @@ Level3BombPositions:
         fcb     5,6
         fcb     8,8
         fcb     11,10
-        fcb     14,12
+        fcb     15,12
         fcb     17,14
         fcb     20,16
         fcb     23,18
@@ -154,7 +154,7 @@ Level3BombPositions:
         fcb     22,6
         fcb     19,8
         fcb     16,10
-        fcb     13,12
+        fcb     12,12
         fcb     10,14
         fcb     7,16
         fcb     4,18

@@ -117,6 +117,31 @@ UpdateAttractCheatClear:
 UpdateAttractCheatDone:
         rts
 
+TryCheatNextLevel:
+        lda     InfiniteLivesFlag
+        beq     TryCheatNextLevelRelease
+
+        lda     #KEY_N_SELECTOR
+        sta     KEYBOARD_PORT
+        lda     KEYBOARD_PORT
+        bita    #$80
+        bne     TryCheatNextLevelRelease
+
+        lda     CheatNextLevelHeld
+        bne     TryCheatNextLevelNo
+        lda     #1
+        sta     CheatNextLevelHeld
+        jsr     StartNextLevelGetReady
+        lda     #1
+        rts
+
+TryCheatNextLevelRelease:
+        clr     CheatNextLevelHeld
+
+TryCheatNextLevelNo:
+        clra
+        rts
+
 ;------------------------------------------------------------------------------
 ; RunGameFrame
 ;
@@ -149,6 +174,8 @@ RunGameFrame:
 
 RunGameFramePlaying:
         jsr     ReadInput
+        jsr     TryCheatNextLevel
+        lbne    RunGameFramePlayingWait
         jsr     SavePlayerRenderState
         jsr     SaveEnemyRenderState
         jsr     SavePowerRenderState
@@ -325,7 +352,7 @@ SavePlayerRenderState:
         sta     PlayerPrevRow
         lda     PlayerSprite
         sta     PlayerPrevSprite
-        jsr     IsPlayerGraceBlinkVisible
+        jsr     IsPlayerRenderVisible
         sta     PlayerPrevGraceBlinkVisible
         rts
 
@@ -496,7 +523,7 @@ ResetPlayerForLevel:
         clr     PlayerLandingPose
         lda     #PLAYER_MOVE_RIGHT
         sta     PlayerFacing
-        lda     #PLAYER_SPRITE_WALK_RIGHT
+        lda     #PLAYER_SPRITE_FRONT
         sta     PlayerSprite
         sta     PlayerPrevSprite
         clr     PlayerGraceTimer
@@ -2504,7 +2531,7 @@ UpdatePlayerSprite:
 UpdatePlayerSpriteLandingPose:
         lda     PlayerLandingPose
         beq     UpdatePlayerSpriteGroundedMove
-        lda     #PLAYER_SPRITE_UP
+        lda     #PLAYER_SPRITE_FRONT
         sta     PlayerSprite
         rts
 
@@ -3495,7 +3522,7 @@ RespawnPlayer:
         sta     PlayerFacing
         lda     #1
         sta     PlayerGrounded
-        lda     #PLAYER_SPRITE_WALK_RIGHT
+        lda     #PLAYER_SPRITE_FRONT
         sta     PlayerSprite
         sta     PlayerPrevSprite
         clr     PlayerGraceTimer
@@ -5462,7 +5489,7 @@ DrawEnergyItemDone:
 ErasePlayerIfChanged:
         lda     PlayerPrevGraceBlinkVisible
         beq     ErasePlayerUnchanged
-        jsr     IsPlayerGraceBlinkVisible
+        jsr     IsPlayerRenderVisible
         cmpa    PlayerPrevGraceBlinkVisible
         bne     ErasePlayerChanged
 
@@ -5488,7 +5515,7 @@ ErasePlayerChanged:
         jmp     MarkStaticRedraw
 
 DrawPlayerIfChanged:
-        jsr     IsPlayerGraceBlinkVisible
+        jsr     IsPlayerRenderVisible
         beq     DrawPlayerUnchanged
         cmpa    PlayerPrevGraceBlinkVisible
         bne     DrawPlayer
@@ -5511,7 +5538,7 @@ DrawPlayerUnchanged:
         rts
 
 DrawPlayer:
-        jsr     IsPlayerGraceBlinkVisible
+        jsr     IsPlayerRenderVisible
         beq     DrawPlayerDone
         lda     PlayerCol
         ldb     PlayerRow
@@ -5531,6 +5558,24 @@ IsPlayerGraceBlinkShown:
         rts
 
 IsPlayerGraceBlinkHidden:
+        clra
+        rts
+
+IsPlayerRenderVisible:
+        jsr     IsPlayerGraceBlinkVisible
+        beq     IsPlayerRenderHidden
+        lda     GameState
+        cmpa    #GAME_STATE_DYING
+        bne     IsPlayerRenderShown
+        lda     PlayerRow
+        cmpa    #ARENA_TOP_ROW
+        blo     IsPlayerRenderHidden
+
+IsPlayerRenderShown:
+        lda     #1
+        rts
+
+IsPlayerRenderHidden:
         clra
         rts
 
@@ -6479,6 +6524,7 @@ PlayerSpriteTable:
         fdb     CellPlayerDownRight
         fdb     CellPlayerWalkRight
         fdb     CellPlayerWalkLeft
+        fdb     CellPlayerFront
 
 CellPlayerUp:
         fcb     %00000000
@@ -6488,7 +6534,8 @@ CellPlayerUp:
         fcb     %00001101
         fcb     %00000101
         fcb     %00000100
-        fcb     %00000000
+        fcb     %00000010
+
         fcb     %00000000
         fcb     %11000000
         fcb     %11111000
@@ -6496,7 +6543,8 @@ CellPlayerUp:
         fcb     %10110000
         fcb     %10100000
         fcb     %00100000
-        fcb     %00000000
+        fcb     %01000000
+
         fcb     %00000111
         fcb     %00001111
         fcb     %00001111
@@ -6504,7 +6552,8 @@ CellPlayerUp:
         fcb     %00010011
         fcb     %00010011
         fcb     %00001111
-        fcb     %00000000
+        fcb     %00000110
+
         fcb     %11100000
         fcb     %11110000
         fcb     %11110000
@@ -6512,7 +6561,44 @@ CellPlayerUp:
         fcb     %11001000
         fcb     %11001000
         fcb     %11110000
+        fcb     %01100000
+
+CellPlayerFront:
         fcb     %00000000
+        fcb     %00000011
+        fcb     %00011111
+        fcb     %00011111
+        fcb     %00001101
+        fcb     %00000101
+        fcb     %00000100
+        fcb     %00000010
+
+        fcb     %00000000
+        fcb     %11000000
+        fcb     %11111000
+        fcb     %11111000
+        fcb     %10110000
+        fcb     %10100000
+        fcb     %00100000
+        fcb     %01000000
+
+        fcb     %00000111
+        fcb     %00001111
+        fcb     %00001111
+        fcb     %00011111
+        fcb     %00010011
+        fcb     %00010011
+        fcb     %00001111
+        fcb     %00000110
+
+        fcb     %11100000
+        fcb     %11110000
+        fcb     %11110000
+        fcb     %11111000
+        fcb     %11001000
+        fcb     %11001000
+        fcb     %11110000
+        fcb     %01100000
 
 CellPlayerDown:
         fcb     %00000000
@@ -6523,6 +6609,7 @@ CellPlayerDown:
         fcb     %00101010
         fcb     %00111000
         fcb     %00011100
+
         fcb     %00000000
         fcb     %11111000
         fcb     %11110100
@@ -6531,22 +6618,24 @@ CellPlayerDown:
         fcb     %10101000
         fcb     %00111000
         fcb     %01110000
+
         fcb     %00001111
         fcb     %00001111
         fcb     %00001111
         fcb     %00001111
         fcb     %00000111
         fcb     %00000111
+        fcb     %00000110
         fcb     %00001110
-        fcb     %00000000
+
         fcb     %11100000
         fcb     %11100000
         fcb     %11100000
         fcb     %11100000
         fcb     %11000000
         fcb     %11000000
+        fcb     %11000000
         fcb     %11100000
-        fcb     %00000000
 
 CellPlayerUpLeft:
         fcb     %00000000
@@ -6557,6 +6646,7 @@ CellPlayerUpLeft:
         fcb     %01111101
         fcb     %00011100
         fcb     %00001100
+
         fcb     %00000000
         fcb     %00000000
         fcb     %11100000
@@ -6565,6 +6655,7 @@ CellPlayerUpLeft:
         fcb     %01100000
         fcb     %01010000
         fcb     %11001000
+
         fcb     %00000111
         fcb     %00000111
         fcb     %00000011
@@ -6573,6 +6664,7 @@ CellPlayerUpLeft:
         fcb     %00000000
         fcb     %00000000
         fcb     %00000000
+
         fcb     %11110100
         fcb     %10110100
         fcb     %11010100
@@ -6580,7 +6672,7 @@ CellPlayerUpLeft:
         fcb     %11110100
         fcb     %01110100
         fcb     %00111000
-        fcb     %00000000
+        fcb     %00011000
 
 CellPlayerUpRight:
         fcb     %00000000
@@ -6591,6 +6683,7 @@ CellPlayerUpRight:
         fcb     %00001101
         fcb     %00010100
         fcb     %00100110
+
         fcb     %00000000
         fcb     %10000000
         fcb     %11100000
@@ -6599,6 +6692,7 @@ CellPlayerUpRight:
         fcb     %01111100
         fcb     %01110000
         fcb     %01100000
+
         fcb     %01011111
         fcb     %01011011
         fcb     %01010111
@@ -6606,7 +6700,8 @@ CellPlayerUpRight:
         fcb     %01011110
         fcb     %01011100
         fcb     %00111000
-        fcb     %00000000
+        fcb     %00110000
+
         fcb     %11000000
         fcb     %11000000
         fcb     %10000000
@@ -6625,6 +6720,7 @@ CellPlayerDownLeft:
         fcb     %00001110
         fcb     %00001000
         fcb     %00000001
+
         fcb     %00000000
         fcb     %11111000
         fcb     %11100100
@@ -6633,14 +6729,16 @@ CellPlayerDownLeft:
         fcb     %11001000
         fcb     %11000000
         fcb     %10100000
+
         fcb     %00011111
         fcb     %00111111
         fcb     %00100111
         fcb     %00001111
         fcb     %00011111
         fcb     %00011110
+        fcb     %00111000
         fcb     %00110000
-        fcb     %00000000
+
         fcb     %11000000
         fcb     %11100000
         fcb     %01100000
@@ -6659,6 +6757,7 @@ CellPlayerDownRight:
         fcb     %00010011
         fcb     %00000011
         fcb     %00000101
+
         fcb     %00000000
         fcb     %11100000
         fcb     %11111000
@@ -6667,6 +6766,7 @@ CellPlayerDownRight:
         fcb     %01110000
         fcb     %00010000
         fcb     %10000000
+
         fcb     %00000011
         fcb     %00000111
         fcb     %00000110
@@ -6675,88 +6775,89 @@ CellPlayerDownRight:
         fcb     %00000000
         fcb     %00000000
         fcb     %00000000
+
         fcb     %11111000
         fcb     %11111100
         fcb     %11100100
         fcb     %11110000
         fcb     %11111000
         fcb     %01111000
+        fcb     %00011100
         fcb     %00001100
-        fcb     %00000000
 
 CellPlayerWalkRight:
         fcb     %00000000
-        fcb     %00000111
+        fcb     %00110111
+        fcb     %00111111
+        fcb     %00111111
+        fcb     %00111111
+        fcb     %00011111
         fcb     %00001111
-        fcb     %00001111
-        fcb     %00001111
-        fcb     %00000111
-        fcb     %00000101
-        fcb     %00001001
+        fcb     %00010011
 
         fcb     %00000000
-        fcb     %11100000
-        fcb     %00110000
-        fcb     %10010000
-        fcb     %11010000
-        fcb     %11110000
-        fcb     %11100000
-        fcb     %11100000
-
-        fcb     %00001011
-        fcb     %00010011
-        fcb     %00010011
-        fcb     %00010001
-        fcb     %00010000
-        fcb     %00010000
-        fcb     %00001111
-        fcb     %00001100
-
-        fcb     %11110000
-        fcb     %11110000
-        fcb     %11110000
-        fcb     %11110000
-        fcb     %11110000
-        fcb     %11100000
-        fcb     %11100000
         fcb     %11000000
+        fcb     %01100000
+        fcb     %00000000
+        fcb     %00100000
+        fcb     %10000000
+        fcb     %11100000
+        fcb     %10000000
+
+        fcb     %00100111
+        fcb     %00101111
+        fcb     %01001111
+        fcb     %01001111
+        fcb     %01000111
+        fcb     %01000111
+        fcb     %10000111
+        fcb     %10000111
+
+        fcb     %11100000
+        fcb     %11110000
+        fcb     %11111000
+        fcb     %11111000
+        fcb     %01010000
+        fcb     %11100000
+        fcb     %11100000
+        fcb     %01100000
 
 CellPlayerWalkLeft:
         fcb     %00000000
+        fcb     %00000011
+        fcb     %00000110
+        fcb     %00000000
+        fcb     %00000100
+        fcb     %00000001
         fcb     %00000111
-        fcb     %00001100
-        fcb     %00001001
-        fcb     %00001011
-        fcb     %00001111
-        fcb     %00000111
-        fcb     %00000111
+        fcb     %00000001
 
         fcb     %00000000
-        fcb     %11100000
+        fcb     %11101100
+        fcb     %11111100
+        fcb     %11111100
+        fcb     %11111100
+        fcb     %11111000
         fcb     %11110000
-        fcb     %11110000
-        fcb     %11110000
-        fcb     %11100000
-        fcb     %10100000
-        fcb     %10010000
+        fcb     %11001000
 
+        fcb     %00000111
         fcb     %00001111
-        fcb     %00001111
-        fcb     %00001111
-        fcb     %00001111
-        fcb     %00001111
+        fcb     %00011111
+        fcb     %00011111
+        fcb     %00001010
         fcb     %00000111
         fcb     %00000111
-        fcb     %00000011
+        fcb     %00000110
 
-        fcb     %11010000
-        fcb     %11001000
-        fcb     %11001000
-        fcb     %10001000
-        fcb     %00001000
-        fcb     %00001000
-        fcb     %11110000
-        fcb     %00110000
+        fcb     %11100100
+        fcb     %11110100
+        fcb     %11110010
+        fcb     %11110010
+        fcb     %11100010
+        fcb     %11100010
+        fcb     %11100001
+        fcb     %11100001
 
 Enemy1SpawnCols:
         fcb     2
@@ -6805,34 +6906,37 @@ CellEnemy1SpawnA:
 CellEnemy1SpawnB:
         fcb     %00100000
         fcb     %00111000
-        fcb     %00010110
+        fcb     %00011110
         fcb     %00001111
         fcb     %00000111
         fcb     %00111111
         fcb     %01111111
         fcb     %00011111
+
         fcb     %00000000
         fcb     %11000110
         fcb     %11001100
-        fcb     %10011100
-        fcb     %01111000
+        fcb     %11011100
+        fcb     %11111000
         fcb     %11111000
         fcb     %11110000
         fcb     %11100000
-        fcb     %00000111
+
+        fcb     %00001111
         fcb     %00001111
         fcb     %00011111
-        fcb     %00111110
-        fcb     %00111101
+        fcb     %00111111
+        fcb     %00111100
         fcb     %01111000
         fcb     %01100000
         fcb     %00000000
+
         fcb     %11111000
         fcb     %11111000
         fcb     %11111000
         fcb     %11111000
-        fcb     %11110100
-        fcb     %11101110
+        fcb     %11111100
+        fcb     %11001110
         fcb     %01000110
         fcb     %00000010
 
@@ -6942,26 +7046,26 @@ CellPower:
         fcb     %00000111
         fcb     %00011111
         fcb     %00110000
+        fcb     %01100000
         fcb     %01100011
-        fcb     %01100111
-        fcb     %11000110
+        fcb     %11000111
         fcb     %11000110
         fcb     %11000110
 
         fcb     %11100000
         fcb     %11111000
         fcb     %00001100
+        fcb     %00000110
         fcb     %11000110
-        fcb     %11100110
-        fcb     %00110011
-        fcb     %00110011
-        fcb     %00110011
+        fcb     %11100011
+        fcb     %01100011
+        fcb     %01100011
 
         fcb     %11000111
         fcb     %11000111
-        fcb     %01000110
-        fcb     %01100110
-        fcb     %01100110
+        fcb     %11000110
+        fcb     %11000110
+        fcb     %01100000
         fcb     %00110000
         fcb     %00011111
         fcb     %00000111
@@ -6969,7 +7073,7 @@ CellPower:
         fcb     %11100011
         fcb     %11000011
         fcb     %00000011
-        fcb     %00000110
+        fcb     %00000011
         fcb     %00000110
         fcb     %00001100
         fcb     %11111000
@@ -6979,35 +7083,35 @@ CellBonusItem:
         fcb     %00000111
         fcb     %00011111
         fcb     %00110000
-        fcb     %01100011
-        fcb     %01100110
+        fcb     %01100000
+        fcb     %01100111
+        fcb     %11000110
         fcb     %11000110
         fcb     %11000111
-        fcb     %11000110
 
         fcb     %11100000
         fcb     %11111000
         fcb     %00001100
+        fcb     %00000110
         fcb     %11000110
-        fcb     %01100110
+        fcb     %01100011
         fcb     %01100011
         fcb     %11000011
-        fcb     %01100011
 
-        fcb     %11000110
         fcb     %11000111
         fcb     %11000110
         fcb     %11000110
-        fcb     %01100111
+        fcb     %11000111
+        fcb     %01100000
         fcb     %00110000
         fcb     %00011111
         fcb     %00000111
 
-        fcb     %01100011
         fcb     %11000011
         fcb     %01100011
         fcb     %01100011
-        fcb     %11000110
+        fcb     %11000011
+        fcb     %00000110
         fcb     %00001100
         fcb     %11111000
         fcb     %11100000
@@ -7105,13 +7209,13 @@ PlayerLandingPose:
 PlayerFacing:
         fcb     PLAYER_MOVE_RIGHT
 PlayerSprite:
-        fcb     PLAYER_SPRITE_WALK_RIGHT
+        fcb     PLAYER_SPRITE_FRONT
 PlayerPrevCol:
         fcb     PLAYER_START_COL
 PlayerPrevRow:
         fcb     PLAYER_START_ROW
 PlayerPrevSprite:
-        fcb     PLAYER_SPRITE_WALK_RIGHT
+        fcb     PLAYER_SPRITE_FRONT
 PlayerGraceTimer:
         fcb     0
 PlayerPrevGraceBlinkVisible:
@@ -7443,6 +7547,8 @@ AttractScreenTimer:
 CheatSqueeptyIndex:
         fcb     0
 InfiniteLivesFlag:
+        fcb     0
+CheatNextLevelHeld:
         fcb     0
 NameEntryIndex:
         fcb     0
