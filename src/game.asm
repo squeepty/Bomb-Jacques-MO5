@@ -37,8 +37,8 @@ StartNewGame:
         sta     ScoreHundredsText
         sta     ScoreTensText
         sta     ScoreOnesText
-        jsr     ClearScreen
-        jsr     DrawHud
+        jsr     ClearGameArea
+        jsr     DrawGameplayStatus
         jsr     DrawStaticArena
         jsr     DrawPlayer
         jmp     EnterGetReadyState
@@ -3562,10 +3562,24 @@ EnterGameOver:
         jsr     BuildPlayerHallEntryFields
         jsr     IsHallOfFameScore
         beq     EnterGameOverHallOnly
+        jsr     ResetEndGameStatus
         jmp     EnterNameEntry
 
 EnterGameOverHallOnly:
-        jmp     EnterHallOfFameScreen
+        jsr     ResetEndGameStatus
+        jmp     EnterHallOfFameScreenNoChrome
+
+ResetEndGameStatus:
+        lda     #START_LIVES
+        sta     LivesValue
+        lda     #'0'
+        sta     ScoreThousandsText
+        sta     ScoreHundredsText
+        sta     ScoreTensText
+        sta     ScoreOnesText
+        jsr     DrawScore
+        jsr     DrawLives
+        jmp     EraseLevelLabel
 
 ;------------------------------------------------------------------------------
 
@@ -3808,7 +3822,7 @@ AdvanceNameEntryIndex:
 
 CommitNameEntry:
         jsr     InsertHallOfFameEntry
-        jmp     EnterHallOfFameScreen
+        jmp     EnterHallOfFameScreenNoChrome
 
 UpdateNameEntryDone:
         rts
@@ -4135,8 +4149,8 @@ UpdateWellDoneColorDone:
 StartNextLevelGetReady:
         jsr     AdvanceCurrentLevel
         jsr     StartCurrentLevel
-        jsr     ClearScreen
-        jsr     DrawHud
+        jsr     ClearGameArea
+        jsr     DrawLevelLabel
         jsr     DrawStaticArena
         jsr     DrawPlayer
         jmp     EnterGetReadyState
@@ -4505,6 +4519,11 @@ DrawHud:
         jsr     DrawScreenChrome
         jsr     DrawLevelLabel
         jmp     DrawHudSidebar
+
+DrawGameplayStatus:
+        jsr     DrawLevelLabel
+        jsr     DrawScore
+        jmp     DrawLives
 
 DrawHudSidebar:
         ldu     #Player1Text

@@ -7,7 +7,7 @@ One bomb is highlighted; collecting it first awards a bonus.
 
 ## Sprite Behavior Reference
 
-This table is reproduced from `src/prompt notes.md` as the design reference for
+This table is reproduced from `docs/prompt notes.md` as the design reference for
 per-level sprite behavior. Timing values are target seconds from active play;
 the current implementation uses game-loop tick counters, so exact wall-clock
 seconds are approximate until timing is tied to a fixed interrupt. "At start"
@@ -46,6 +46,20 @@ of fame, and level-clear states do not consume spawn time.
 | Power Ball after Bonus Ball caught | 20 seconds | 340 active-play ticks |
 | Energy Ball after Power Ball caught | 20 seconds | 340 active-play ticks |
 
+## Current BUILD 008 Scope
+
+BUILD 008 is the game feature-complete milestone. It includes title and
+hall-of-fame attract screens, name entry, ten handcrafted levels, level-clear
+and get-ready transitions, lives, death/respawn, bonus/power/energy items,
+enemy freeze, score popups, and the editable right-panel art.
+
+The `SQUEEPTY` cheat can be entered on the title or hall-of-fame screens. When
+active, lives are not decremented and `N` advances to the next level during
+gameplay.
+
+The browser sprite editor supports both 2x2 gameplay sprites and the 56x128
+right-panel `SidebarArtBitmap`.
+
 ## Milestone 7 Scope
 
 BUILD 007 turns enemy collision into a real arcade life cycle. Jacques starts
@@ -57,10 +71,9 @@ Enemies and items remain frozen during the death animation and for two
 additional seconds after respawn. Respawn starts a two-second blinking grace
 period where enemy collisions are ignored once movement resumes.
 
-When the final life is lost, the game displays `GAME OVER` and stops gameplay.
-
-Restart controls, title flow, high score, sound effects, and death animation
-are deferred.
+When the final life is lost, the game displays `GAME OVER`. BUILD 008 later
+adds title flow, high-score name entry, and hall-of-fame display. Sound effects
+remain deferred.
 
 ## Milestone 6 Scope
 

@@ -1,5 +1,17 @@
 # Known Bugs
 
+## BUILD 008 / Current
+
+- No blocking gameplay bugs are currently known after the
+  `milestone-game-feature-complete` commit.
+- Final DCMOTO play-through verification is still recommended across all ten
+  levels.
+- Timing still uses the temporary busy-wait loop and
+  `PLAY_TICKS_PER_SECOND = 17`, not a 50 Hz interrupt.
+- Sound effects are not implemented.
+- The title, hall-of-fame, sprite editor, and right-panel art flows are
+  functional but still open to visual polish.
+
 ## BUILD 007
 
 - Lives, death pause, respawn, and game-over behavior have not yet been

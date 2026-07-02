@@ -6,39 +6,57 @@ Motorola 6809 assembly.
 The project begins with a strict educational goal: each milestone must build,
 run, and explain the MO5 concepts it introduces.
 
-## Current Milestone
+## Current State
 
-BUILD 007 implements lives, death, respawn, and game over:
+BUILD 008 is the game feature-complete milestone, captured at
+`milestone-game-feature-complete`:
 
 ```text
-BOMB JACQUES BUILD 007
+BOMB JACQUES BUILD 008
 LIVES 3      SCORE 0000
 ```
 
-The game draws a static arena with platforms, bombs, and 2x2-cell Jacques
-sprites. The player can move left and right, jump, fall under gravity, land on
+The game now has a title screen, hall of fame, ten handcrafted levels, a static
+arena with right-panel pixel art, platforms, bombs, and 2x2-cell Jacques
+sprites. Jacques can move left and right, jump, fall under gravity, land on
 platforms, collect bombs, float slowly while jump is held during a fall, and
-increase the score. One bomb is highlighted as the current bonus target;
-collecting it awards 200 points, advances the highlight to the next active
-bomb, and flashes `BONUS` in the HUD. Normal bombs award 50 points, bonus balls
-award 500 points, and frozen enemies award 100 points.
-One 2x2 enemy spawns from varied top columns, falls, walks on platforms when
-supported, then transforms into a flying phase 2 after reaching the bottom
-floor. A one-second two-frame effect plays before it becomes active and again
-before phase 2 activates. A second 2x2 enemy flies horizontally and vertically,
-with 80% chase movement toward Jacques and 20% wandering.
+increase the score.
+
+One bomb is highlighted as the current bonus target. Normal bombs award 50
+points, lit bombs award 200 points, bonus balls award 500 points, and frozen
+enemies award 100 points. The bonus, power, and energy balls spawn
+sequentially: the bonus ball uses its timer, the power ball appears 20 seconds
+after the bonus ball is caught, and the energy ball appears 20 seconds after
+the power ball is caught. The energy ball awards one life if Jacques has fewer
+than 3 lives.
+
+Enemy 1 spawns from varied top columns, falls, walks on platforms when
+supported, then transforms into faster flying hunter phases after reaching the
+bottom floor. Enemy 2 flies horizontally and vertically with 80% chase movement
+toward Jacques and 20% wandering. The power ball freezes active enemies for
+about 6 seconds; frozen sprites replace the normal enemy sprites and blink for
+the final 2 seconds.
 
 Jacques starts with 3 lives. Touching either enemy makes Jacques fly straight
-up offscreen while rotating jump poses, subtracts one life, then respawns him at
-the starting position. Movement resumes after a short hold, with a blinking
-grace period. When no lives remain, the game shows `GAME OVER` and stops
+up offscreen at one-third normal speed while rotating jump poses, subtracts one
+life, then respawns him at the starting position. Movement resumes after a
+2-second hold, with a blinking grace period. When no lives remain, the game
+shows `GAME OVER`; high-score name entry and hall-of-fame display follow when
+the score qualifies.
+
+The `SQUEEPTY` cheat can be entered on the title or hall-of-fame screens. When
+active, lives are not decremented and `N` skips to the next level during
 gameplay.
+
+The local sprite editor at `tools/sprite-editor.mjs` edits gameplay sprites and
+the right-panel `SidebarArtBitmap`, saving back to assembly and rebuilding.
 
 Controls:
 
 - `Q`: move left
 - `D`: move right
 - `Space`: jump
+- `N`: next level while the `SQUEEPTY` cheat is active
 
 The standard MO5 game-extension joystick is also read when present.
 

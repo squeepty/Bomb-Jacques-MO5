@@ -1,6 +1,6 @@
 # Input Notes
 
-BUILD 007 keeps input state in the same shape used by many 8-bit game loops:
+BUILD 008 keeps input state in the same shape used by many 8-bit game loops:
 
 - `Held`: the control is down now.
 - `Press`: the control became down this frame.
@@ -18,6 +18,7 @@ Current keys:
 - `Q`: left
 - `D`: right
 - `Space`: jump
+- `N`: next level, only while the `SQUEEPTY` cheat is active
 
 Name entry accepts direct keyboard input:
 
@@ -25,11 +26,16 @@ Name entry accepts direct keyboard input:
 - `Enter`: finish the name immediately
 - `Backspace`: erase the previous character
 
+The `SQUEEPTY` cheat is entered from the title or hall-of-fame screens using
+the same name-key scanner. When active, enemy hits do not decrement lives, and
+the playing-state `N` key uses a separate held-key latch so one press advances
+only one level.
+
 The key selectors come from the MO5 monitor keyboard scan order.
 
 ## Joystick
 
-When the standard MO5 game extension is present, BUILD 007 reads:
+When the standard MO5 game extension is present, BUILD 008 reads:
 
 - `$A7CC`: joystick directions
 - `$A7CD`: joystick trigger

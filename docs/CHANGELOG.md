@@ -1,5 +1,52 @@
 # Changelog
 
+## BUILD 008
+
+Added:
+
+- Title screen and hall-of-fame attract flow.
+- Ten handcrafted levels with recent platform and bomb spacing polish.
+- Name entry and hall-of-fame score insertion.
+- Sequential bonus/power/energy item timing.
+- Energy ball collection that restores one life when below 3 lives.
+- Power freeze reduced to about 6 seconds, with frozen enemies blinking for the
+  final 2 seconds.
+- Frozen enemy rendering now replaces normal enemy sprites instead of overlaying
+  transparent frozen art.
+- Death flow where Jacques flies straight up offscreen at one-third normal
+  movement speed, with movement frozen and respawn grace afterward.
+- Front-facing player sprite used on spawn and after landing.
+- Regenerated player walk-right sprite from reference art and mirrored
+  walk-left sprite, both shifted down one pixel row.
+- Right-panel `SidebarArtBitmap` art pass, including the bottom `JACQUES`
+  banner.
+- Browser sprite editor improvements: draw/erase tools, drag painting, live
+  preview, sprite save/rebuild, and a `Right Panel` tab for the sidebar pixel
+  art.
+- `SQUEEPTY` cheat support for infinite lives and `N` next-level skip.
+- Low-risk movement-counter staggering for smoother perceived enemy motion.
+- BUILD 008 labels and load notes.
+
+Expected:
+
+- Program loads at `$6000`.
+- `BOMB JACQUES BUILD 008` appears in-game.
+- Title and hall-of-fame screens alternate until start is pressed.
+- Gameplay supports score, lives, bombs, lit bombs, bonus/power/energy balls,
+  frozen enemies, death/respawn, level clear, get-ready, name entry, and ten
+  levels.
+- The sprite editor runs from `node tools/sprite-editor.mjs` and can edit both
+  gameplay sprites and the right-panel bitmap.
+
+Observed:
+
+- Assembles successfully with `lwasm`.
+- Current milestone is tagged `milestone-game-feature-complete`.
+
+Status:
+
+- Game feature-complete milestone.
+
 ## BUILD 007
 
 Added:

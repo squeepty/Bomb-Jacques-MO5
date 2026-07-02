@@ -14,6 +14,51 @@ The assembler command is wrapped by:
 tools/build.sh
 ```
 
+## BUILD 008
+
+Added:
+
+- Title screen, hall-of-fame screen, name entry, and high-score insertion.
+- Ten handcrafted level layouts with late-pass spacing fixes in Levels 2, 3,
+  and 6.
+- Sequential bonus/power/energy item spawning.
+- Energy ball extra-life behavior when Jacques has fewer than 3 lives.
+- About 6 seconds of power freeze, with frozen enemies blinking during the
+  final 2 seconds.
+- Frozen enemy sprites replace normal enemy sprites during freeze.
+- Slower death animation: Jacques flies straight up offscreen while rotating
+  jump poses, then respawns after a short hold with blinking grace.
+- Front-facing player sprite for spawn and landing.
+- Regenerated player walk-right sprite, mirrored walk-left sprite, and updated
+  sidebar pixel art.
+- `SQUEEPTY` cheat support for infinite lives and `N` next-level skip.
+- Browser sprite editor support for gameplay sprites and the right-panel
+  `SidebarArtBitmap`.
+- BUILD 008 labels and load notes.
+
+Expected:
+
+The MO5 screen clears into the title/attract flow. Starting the game displays
+the arena headed by:
+
+```text
+BOMB JACQUES BUILD 008
+LIVES 3      SCORE 0000
+```
+
+Gameplay supports bomb collection, lit-bomb scoring, bonus/power/energy item
+spawns, enemy freeze, enemy collisions, death/respawn, level-clear/get-ready,
+ten level layouts, high-score name entry, and hall-of-fame display.
+
+Observed:
+
+The source assembles successfully with LWTOOLS. The current binary loads at
+`$6000` and ends at `$9B09`.
+
+Status:
+
+Game feature-complete milestone, tagged `milestone-game-feature-complete`.
+
 ## BUILD 007
 
 Added:

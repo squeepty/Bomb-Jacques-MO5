@@ -258,7 +258,7 @@ The `decb`/`LOADM` stream has records like this:
 For the current build, the first and only data record begins:
 
 ```text
-00 02 17 60 00 ...
+00 3a df 60 00 ...
 ```
 
 Decoded:
@@ -266,7 +266,7 @@ Decoded:
 | Bytes | Meaning |
 | --- | --- |
 | `00` | Data record |
-| `02 17` | `$0217` bytes, 535 decimal |
+| `3a df` | `$3ADF` bytes, 15071 decimal |
 | `60 00` | Load address `$6000` |
 
 ### End Record
@@ -296,38 +296,39 @@ The cassette layer simply streams the `LOADM` bytes in order.
 
 ## Current Project Example
 
-After running `tools/build.sh`, the current `build/bomb-jacques.k7` is 664
-bytes and contains these blocks:
+After running `tools/build.sh`, the current `build/bomb-jacques.k7` is 16397
+bytes and contains 62 blocks: one header block, 60 data blocks, and one end
+block. The first and last blocks are:
 
 | K7 offsets | Type | Payload length | Stored length | Checksum |
 | --- | --- | ---: | ---: | ---: |
 | `$0000-$0022` | Header `$00` | 14 | `$10` | `$17` |
-| `$0023-$0135` | Data `$01` | 254 | `$00` | `$A8` |
-| `$0136-$0248` | Data `$01` | 254 | `$00` | `$60` |
-| `$0249-$0282` | Data `$01` | 37 | `$27` | `$01` |
-| `$0283-$0297` | End `$FF` | 0 | `$02` | `$00` |
+| `$0023-$0135` | Data `$01` | 254 | `$00` | `$AD` |
+| `$0136-$0248` | Data `$01` | 254 | `$00` | `$D9` |
+| `...` | 57 more full data blocks | 254 | `$00` | varies |
+| `$3F84-$3FF7` | Data `$01` | 95 | `$61` | `$AE` |
+| `$3FF8-$400C` | End `$FF` | 0 | `$02` | `$00` |
 
-The carried `LOADM` stream is 545 bytes:
+The carried `LOADM` stream is 15081 bytes:
 
 ```text
-535-byte data record + 5-byte end record = 545 bytes
+15071-byte data record + 5-byte end record = 15081 bytes
 ```
 
 The K7 data payload is split like this:
 
 ```text
-254 + 254 + 37 = 545 bytes
+59 full 254-byte blocks + 1 partial 95-byte block = 15081 bytes
 ```
 
 The total K7 size follows from the block sizes:
 
 ```text
 header: 21 + 14 = 35
-data:   21 + 254 = 275
-data:   21 + 254 = 275
-data:   21 + 37 = 58
+data:   59 * (21 + 254) = 16225
+data:   21 + 95 = 116
 end:    21 + 0 = 21
-total:  35 + 275 + 275 + 58 + 21 = 664 bytes
+total:  35 + 16225 + 116 + 21 = 16397 bytes
 ```
 
 ## Parser Checklist

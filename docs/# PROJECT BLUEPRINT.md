@@ -69,6 +69,22 @@ DCMOTO emulator running under Wine.
 
 ---
 
+# Current State
+
+BUILD 008 is the game feature-complete milestone, tagged
+`milestone-game-feature-complete`.
+
+The game currently includes title and hall-of-fame attract screens, high-score
+name entry, ten handcrafted levels, level-clear and get-ready transitions,
+lives, death/respawn flow, bonus/power/energy item progression, enemy freeze,
+score popups, editable right-panel art, and a browser sprite editor.
+
+Sound effects remain deferred. The next phase should be release-candidate bug
+fixing, final DCMOTO play-through verification, and any small presentation
+polish needed before release.
+
+---
+
 # Gameplay
 
 The player controls Jacques, a fearless acrobat.
@@ -77,15 +93,28 @@ Goal:
 
 Collect every bomb on the screen while avoiding enemies.
 
-One bomb is always highlighted.
+One bomb is always highlighted. Collecting the highlighted bomb awards bonus
+points.
 
-Collecting the highlighted bomb awards bonus points.
+Bonus, power, and energy balls appear sequentially during active play:
+
+* the bonus ball uses its own timer
+* the power ball appears 20 seconds after the bonus ball is caught
+* the energy ball appears 20 seconds after the power ball is caught
+
+The power ball freezes active enemies for about 6 seconds. Frozen enemies use a
+replacement sprite and blink during the final 2 seconds. The energy ball grants
+one extra life if Jacques has fewer than 3 lives.
 
 When all bombs are collected:
 
 * level complete
 * next arena loads
 * enemies become slightly faster
+
+When Jacques is hit, he flies straight up offscreen, loses one life unless the
+`SQUEEPTY` cheat is active, then respawns with a brief grace period. When no
+lives remain, qualifying scores go through name entry and the hall of fame.
 
 Simple.
 
@@ -131,21 +160,12 @@ Moving objects should remain simple.
 
 Recommended sprite sizes:
 
-Player
+Current gameplay art uses 8x8 bitmap cells. Jacques, enemies, bombs, score
+popups, and bonus/power/energy items are drawn as 2x2-cell sprites. Platforms
+use 8x8 cells with left, middle, and right cap variants.
 
-16×16 pixels
-
-Enemies
-
-8×8 or 12×12
-
-Bombs
-
-8×8
-
-Platforms
-
-8×8 or 16×8 tiles
+The right-side banner is a 56x128 monochrome bitmap stored in
+`src/sidebar_art.asm`.
 
 The game should favor smooth animation over graphic complexity.
 
@@ -153,7 +173,7 @@ The game should favor smooth animation over graphic complexity.
 
 # Audio
 
-Initially:
+Sound effects remain planned but are not implemented in BUILD 008.
 
 * jump
 * collect bomb
@@ -179,50 +199,60 @@ src/
 
     input.asm
 
-    sprites.asm
-
-    renderer.asm
-
-    physics.asm
-
-    collision.asm
-
-    enemies.asm
+    game.asm
 
     levels.asm
 
-    score.asm
-
-    sound.asm
-
-    title.asm
+    sidebar_art.asm
 
 docs/
 
     PROJECT_BLUEPRINT.md
 
+    # PROJECT BLUEPRINT.md
+
     MEMORY_MAP.md
 
     BUILD_NOTES.md
 
+    CHANGELOG.md
+
     GAME_DESIGN.md
+
+    INPUT.md
+
+    K7_FORMAT.md
+
+    KNOWN_BUGS.md
 
     CPU_NOTES.md
 
     SPRITE_FORMAT.md
 
+    VIDEO.md
+
+    prompt notes.md
+
 tools/
 
     build.sh
 
+    make-k7.mjs
+
+    sprite-editor.html
+
+    sprite-editor.mjs
+
 README.md
-
-CHANGELOG.md
-
-KNOWN_BUGS.md
 ```
 
-Every module must have a single responsibility.
+The current codebase is centered around `src/game.asm`, with platform constants,
+input, video, level data, memory notes, and sidebar art split into neighboring
+modules. The sprite editor rewrites gameplay sprite cells in `src/game.asm` and
+right-panel art in `src/sidebar_art.asm`.
+
+Every module should keep a clear responsibility even when BUILD 008 still
+favors a compact assembly layout over many tiny files.
 
 ---
 
@@ -434,6 +464,12 @@ Release Candidate.
 Bug fixing only.
 
 No new features.
+
+Current progress:
+
+BUILD 008 covers milestones 0 through 9 except sound effects. Milestone 10 is
+now the appropriate mode for final emulator verification, bug fixing, and
+release polish.
 
 ---
 
