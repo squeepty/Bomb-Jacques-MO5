@@ -1,12 +1,36 @@
 # Thomson K7 Cassette Image Format
 
-This note documents the byte structure of a standard Thomson `.k7` cassette
-image as used by DCMOTO and by this project.
+This note documents the byte structure of the Thomson `.k7` cassette image used
+by DCMOTO and by this project. It is written as a learning reference, so it
+separates the cassette container from the machine-code file carried inside it.
 
 The scope is the decoded cassette byte stream. It is not a WAV/audio format and
 does not describe pulse timings, motor control, silence gaps, or copy-protected
 tapes. Copy-protected commercial tapes can use non-standard physical encodings
 that are outside this document.
+
+## Three Layers To Keep Separate
+
+The project cassette has three nested layers:
+
+| Layer | File in this project | What it means |
+| --- | --- | --- |
+| Raw program bytes | `build/bomb-jacques.bin` | The assembled 6809 machine code and data that will live at `$6000-$9B09`. |
+| `LOADM` stream | `build/bomb-jacques.loadm` | A Thomson/DECB machine-code file: record headers plus the raw program bytes. |
+| K7 cassette image | `build/bomb-jacques.k7` | Cassette blocks that carry the `LOADM` stream. |
+
+The K7 layer does not understand 6809 instructions, labels, video memory, or the
+program entry point. It only stores a named binary file and splits its bytes into
+cassette blocks. The `LOADM` layer is what says "load these bytes at `$6000` and
+execute from `$6000`."
+
+For the current build:
+
+| Artifact | Size | Meaning |
+| --- | ---: | --- |
+| `build/bomb-jacques.bin` | 15114 bytes | Program image from `$6000` through `$9B09`. |
+| `build/bomb-jacques.loadm` | 15124 bytes | 5-byte data-record header + 15114 program bytes + 5-byte end record. |
+| `build/bomb-jacques.k7` | 16440 bytes | Header block + 60 data blocks + end block. |
 
 ## File Structure
 
@@ -21,9 +45,9 @@ data block n
 end block
 ```
 
-Each block carries a small Thomson cassette record. The data blocks contain the
-file bytes exactly as the Thomson loader should see them. For this project those
-file bytes are an LWTOOLS `decb`/`LOADM` stream, described later.
+The file header block gives the cassette file a Thomson name, extension, and
+type. The data blocks carry the file bytes. For Bomb Jacques, those file bytes
+are exactly the contents of `build/bomb-jacques.loadm`.
 
 ## Block Structure
 
@@ -42,11 +66,19 @@ Every block emitted by `tools/make-k7.mjs` has this layout:
 Total block size is:
 
 ```text
-16 leader bytes + 2 marker bytes + 1 type byte + 1 length byte + n payload bytes + 1 checksum byte
+16 leader bytes
++ 2 marker bytes
++ 1 type byte
++ 1 stored-length byte
++ n payload bytes
++ 1 checksum byte
 = 21 + n bytes
 ```
 
-### Leader
+The block framing is the same for header, data, and end blocks. Only the type
+and payload change.
+
+## Leader
 
 This project's writer emits this 16-byte leader before every block:
 
@@ -54,17 +86,17 @@ This project's writer emits this 16-byte leader before every block:
 dc 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
 ```
 
-Some other standard `.k7` producers emit sixteen `$01` bytes instead:
+Some standard `.k7` producers emit sixteen `$01` bytes instead:
 
 ```text
 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
 ```
 
 For project-local files, expect the first form. For general-purpose tooling,
-treat the leader as synchronization padding and do not depend on the first byte
-being only `$DC` or only `$01`.
+treat the leader as synchronization padding and avoid depending on the first
+byte being only `$DC` or only `$01`.
 
-### Marker
+## Marker
 
 The two marker bytes are always:
 
@@ -74,9 +106,12 @@ The two marker bytes are always:
 
 They mark the start of the structured part of the block after the leader.
 
-### Block Type
+If you are writing a parser, it is useful to think of the 16 leader bytes as
+"skip/tolerate" and the `$3C $5A` bytes as "now the block really starts."
 
-The standard block types used here are:
+## Block Type
+
+The block types used by this project are:
 
 | Type | Meaning | Payload size |
 | --- | --- | ---: |
@@ -84,12 +119,22 @@ The standard block types used here are:
 | `$01` | Data block | 0 to 254 bytes |
 | `$FF` | End block | 0 bytes |
 
-The file header block comes first. Data blocks follow until the whole file
-payload has been written. The end block terminates the file.
+The order is always:
 
-### Stored Length
+```text
+$00 header
+$01 data
+$01 data
+...
+$01 data
+$FF end
+```
 
-The stored length is not just the payload length. It is:
+`tools/make-k7.mjs` only writes these three types.
+
+## Stored Length
+
+The stored length is not the payload length. It is:
 
 ```text
 stored_length = (payload_length + 2) & $FF
@@ -108,14 +153,18 @@ This creates one important wraparound case:
 | 0 | `$02` |
 | 14 | `$10` |
 | 37 | `$27` |
+| 138 | `$8C` |
 | 253 | `$FF` |
 | 254 | `$00` |
+
+A full 254-byte data block therefore has stored length `$00`, not `$FE`. This
+is the most common off-by-two surprise when hand-decoding a K7 file.
 
 `tools/make-k7.mjs` limits payloads to 254 bytes. It never emits a 255-byte
 payload, so stored length `$01` should be treated as invalid for files generated
 by this project.
 
-### Checksum
+## Checksum
 
 The checksum is the two's complement of the 8-bit sum of the payload bytes:
 
@@ -133,8 +182,16 @@ Equivalently, this must be true:
 (sum(payload_bytes) + checksum) & $FF == 0
 ```
 
-The checksum covers only the payload. It does not include the leader bytes, the
-`$3C $5A` marker, the block type, or the stored length byte.
+The checksum covers only the payload. It does not include:
+
+- leader bytes
+- `$3C $5A` marker bytes
+- block type
+- stored length byte
+
+That narrow checksum scope is another common debugging trap. If a checksum only
+matches after you include the type or length byte, the parser is checking the
+wrong range.
 
 ## File Header Payload
 
@@ -173,9 +230,11 @@ Decoded:
 | `02` | Machine-code binary |
 | `00 00` | Attributes used by this project |
 
-Other file types can use different attribute bytes. For example, the public
-DCMOTO `DCTXT2K7` BASIC example emits `ff ff` for an ASCII BASIC file. For this
-project's `LOADM` cassette images, the attributes are always `00 00`.
+The header payload sum is `$E9`, so the checksum is `$17`:
+
+```text
+($E9 + $17) & $FF = $00
+```
 
 The complete project header block is:
 
@@ -188,13 +247,26 @@ dc 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01
 17
 ```
 
-Here `$10` is the stored length (`14 + 2`) and `$17` is the payload checksum.
+Where:
+
+| Byte(s) | Meaning |
+| --- | --- |
+| `dc 01 ... 01` | 16-byte leader |
+| `3c 5a` | Block marker |
+| `00` | Header block type |
+| `10` | Stored length: `14 + 2` |
+| `42 ... 00` | 14-byte header payload |
+| `17` | Payload checksum |
+
+Other file types can use different attribute bytes. For example, some BASIC
+cassette examples use `ff ff` attributes. For this project's `LOADM` cassette
+images, the attributes are always `00 00`.
 
 ## Data Blocks
 
 A type `$01` block contains file payload bytes. The `.k7` block layer does not
-interpret those bytes; it only chunks them into blocks and adds the cassette
-record framing.
+interpret those bytes; it only chunks them into blocks and adds cassette record
+framing.
 
 `tools/make-k7.mjs` writes data blocks in chunks of up to 254 bytes:
 
@@ -214,8 +286,23 @@ dc 01 ... 01
 checksum
 ```
 
-A shorter final data block uses `payload_length + 2`. For example, a 37-byte
-final data block uses stored length `$27`.
+The first data block in this project begins with the first bytes of the inner
+`LOADM` stream:
+
+```text
+00 3b 0a 60 00 ...
+```
+
+Those five bytes are not K7 metadata. They are the `LOADM` data-record marker,
+data length, and load address. The K7 data block simply carries them.
+
+The final data block is shorter when the carried file size is not a multiple of
+254. In the current build, the final data block carries 138 bytes, so its stored
+length is:
+
+```text
+138 + 2 = 140 = $8C
+```
 
 ## End Block
 
@@ -230,7 +317,14 @@ ff
 00
 ```
 
-Because the payload is empty, the checksum is also zero.
+Because the payload is empty, the checksum is also zero:
+
+```text
+(0 + $00) & $FF = $00
+```
+
+The K7 end block marks the end of the cassette file. It is separate from the
+inner `LOADM` end record described below.
 
 ## Inner `LOADM` Payload Used Here
 
@@ -244,7 +338,12 @@ That stream is the `build/bomb-jacques.loadm` file. It is not part of the K7
 container itself, but it matters because it is what the MO5 `LOADM`/`CLOADM`
 loader consumes after the cassette layer has delivered the bytes.
 
-The `decb`/`LOADM` stream has records like this:
+The `decb`/`LOADM` stream has two records in the current build:
+
+```text
+data record
+end record
+```
 
 ### Data Record
 
@@ -258,16 +357,26 @@ The `decb`/`LOADM` stream has records like this:
 For the current build, the first and only data record begins:
 
 ```text
-00 3a df 60 00 ...
+00 3b 0a 60 00 ...
 ```
 
 Decoded:
 
 | Bytes | Meaning |
 | --- | --- |
-| `00` | Data record |
-| `3a df` | `$3ADF` bytes, 15071 decimal |
+| `00` | Data record marker |
+| `3b 0a` | `$3B0A` bytes, 15114 decimal |
 | `60 00` | Load address `$6000` |
+
+The program bytes occupy `$3B0A` bytes. Because they load at `$6000`, the last
+loaded byte is:
+
+```text
+$6000 + $3B0A - 1 = $9B09
+```
+
+That value should match the memory-map documentation and the assembler listing.
+If it does not, either the binary changed or one of the docs is stale.
 
 ### End Record
 
@@ -287,38 +396,57 @@ Decoded:
 
 | Bytes | Meaning |
 | --- | --- |
-| `ff` | End record |
+| `ff` | End record marker |
 | `00 00` | Zero field |
 | `60 00` | Execution address `$6000` |
+
+The inner `LOADM` end record is five bytes long. It tells the loader where to
+start execution after loading.
 
 The K7 data block boundaries do not have to match `LOADM` record boundaries.
 The cassette layer simply streams the `LOADM` bytes in order.
 
 ## Current Project Example
 
-After running `tools/build.sh`, the current `build/bomb-jacques.k7` is 16397
-bytes and contains 62 blocks: one header block, 60 data blocks, and one end
-block. The first and last blocks are:
+After running `tools/build.sh`, the current `build/bomb-jacques.k7` is 16440
+bytes and contains 62 blocks:
+
+| Block category | Count |
+| --- | ---: |
+| Header block | 1 |
+| Full 254-byte data blocks | 59 |
+| Final partial data block | 1 |
+| End block | 1 |
+| Total blocks | 62 |
+
+The first, last, and boundary blocks are:
 
 | K7 offsets | Type | Payload length | Stored length | Checksum |
 | --- | --- | ---: | ---: | ---: |
 | `$0000-$0022` | Header `$00` | 14 | `$10` | `$17` |
-| `$0023-$0135` | Data `$01` | 254 | `$00` | `$AD` |
+| `$0023-$0135` | Data `$01` | 254 | `$00` | `$81` |
 | `$0136-$0248` | Data `$01` | 254 | `$00` | `$D9` |
 | `...` | 57 more full data blocks | 254 | `$00` | varies |
-| `$3F84-$3FF7` | Data `$01` | 95 | `$61` | `$AE` |
-| `$3FF8-$400C` | End `$FF` | 0 | `$02` | `$00` |
+| `$3E71-$3F83` | Data `$01` | 254 | `$00` | `$5C` |
+| `$3F84-$4022` | Data `$01` | 138 | `$8C` | `$13` |
+| `$4023-$4037` | End `$FF` | 0 | `$02` | `$00` |
 
-The carried `LOADM` stream is 15081 bytes:
+The carried `LOADM` stream is 15124 bytes:
 
 ```text
-15071-byte data record + 5-byte end record = 15081 bytes
+5-byte data-record header
++ 15114-byte program image
++ 5-byte end record
+= 15124 bytes
 ```
 
 The K7 data payload is split like this:
 
 ```text
-59 full 254-byte blocks + 1 partial 95-byte block = 15081 bytes
+59 full 254-byte blocks + 1 partial 138-byte block
+= (59 * 254) + 138
+= 14986 + 138
+= 15124 bytes
 ```
 
 The total K7 size follows from the block sizes:
@@ -326,10 +454,43 @@ The total K7 size follows from the block sizes:
 ```text
 header: 21 + 14 = 35
 data:   59 * (21 + 254) = 16225
-data:   21 + 95 = 116
+data:   21 + 138 = 159
 end:    21 + 0 = 21
-total:  35 + 16225 + 116 + 21 = 16397 bytes
+total:  35 + 16225 + 159 + 21 = 16440 bytes
 ```
+
+The final byte offset is `$4037` because offsets are zero-based:
+
+```text
+16440 decimal = $4038 bytes
+last offset = $4038 - 1 = $4037
+```
+
+## Writer Walkthrough
+
+The project writer is `tools/make-k7.mjs`. Its structure mirrors the format:
+
+| Function or step | Format role |
+| --- | --- |
+| `asciiPadded(text, length)` | Uppercases and space-pads the 8-byte name and 3-byte extension fields. |
+| `leader()` | Emits `$DC` followed by fifteen `$01` bytes. |
+| `checksum(body)` | Computes the two's-complement checksum over payload bytes only. |
+| `block(type, body)` | Emits one framed K7 block: leader, marker, type, stored length, payload, checksum. |
+| `block(0x00, ...)` | Writes the 14-byte file header block. |
+| `for (... offset += 254)` | Splits the inner file into 254-byte data blocks. |
+| `block(0xff, [])` | Writes the empty K7 end block. |
+
+The writer receives `build/bomb-jacques.loadm` as its input payload, not
+`build/bomb-jacques.bin`. This distinction matters:
+
+```text
+bin  = raw bytes that go into memory
+loadm = loader records around those bytes
+k7 = cassette blocks around the loadm stream
+```
+
+If the writer used the raw `.bin` directly, the cassette would not carry the
+`LOADM` load address and execution address records.
 
 ## Parser Checklist
 
@@ -341,15 +502,87 @@ For a project-generated `.k7` parser:
 4. Read stored length.
 5. Compute `payload_length = (stored_length - 2) & $FF`.
 6. Reject payload length 255.
-7. Read payload bytes.
+7. Read `payload_length` payload bytes.
 8. Read checksum.
 9. Verify `(sum(payload) + checksum) & $FF == 0`.
 10. Interpret block type `$00`, `$01`, or `$FF`.
-11. Stop after the `$FF` end block.
+11. Append payload bytes from `$01` data blocks to reconstruct the carried file.
+12. Stop after the `$FF` end block.
 
 For general Thomson `.k7` tooling, be more tolerant of the leader bytes and more
 careful around files that may not be standard, especially protected commercial
 cassettes.
+
+## Teaching Decoder Pseudocode
+
+This pseudocode focuses on the project-generated format:
+
+```text
+offset = 0
+payload_file = []
+
+while offset < k7_size:
+    leader = read 16 bytes
+    marker = read 2 bytes
+    require marker == [ $3C, $5A ]
+
+    type = read byte
+    stored_length = read byte
+    payload_length = (stored_length - 2) & $FF
+    require payload_length != 255
+
+    payload = read payload_length bytes
+    checksum = read byte
+    require (sum(payload) + checksum) & $FF == 0
+
+    if type == $00:
+        decode file name, extension, and file type
+    else if type == $01:
+        append payload to payload_file
+    else if type == $FF:
+        stop
+    else:
+        error
+```
+
+After this loop, `payload_file` should equal `build/bomb-jacques.loadm`.
+
+## Common Mistakes
+
+| Symptom | Likely cause |
+| --- | --- |
+| Full data blocks appear to have zero bytes | Stored length `$00` means 254 payload bytes because the length wraps. |
+| Checksums are consistently wrong | The checksum is being calculated over type/length/marker bytes instead of payload only. |
+| The first data block looks like metadata | It is the inner `LOADM` record header: `00 3b 0a 60 00`. |
+| The cassette seems to end twice | There is a `LOADM` end record inside the data payload and a K7 end block outside it. |
+| A parser reads one byte too few or too many | Remember that block size is `21 + payload_length`. |
+| Offsets look one byte past the documented end | File sizes are counts; offsets are zero-based. |
+
+## Useful Consistency Checks
+
+These checks are quick ways to prove the three layers still agree:
+
+```text
+raw binary size:
+    $3B0A = 15114 bytes
+
+loaded address range:
+    $6000 through $9B09
+
+LOADM size:
+    5 + 15114 + 5 = 15124 bytes
+
+K7 data split:
+    59 * 254 + 138 = 15124 bytes
+
+K7 total size:
+    35 + 16225 + 159 + 21 = 16440 bytes
+```
+
+If a code change grows the assembled binary, update the numbers here only after
+checking the generated artifacts. The format rules stay the same, but the
+program length, final partial block length, checksums, offsets, and total K7
+size can change.
 
 ## Sources
 

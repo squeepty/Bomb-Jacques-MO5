@@ -1,29 +1,73 @@
 # Game Design
 
+This document describes the current intended game rules and feel. Historical
+build-by-build changes live in `docs/CHANGE_LOG.md`.
+
 ## Core Loop
 
 Jacques collects every bomb in a single-screen arena while avoiding enemies.
-One bomb is highlighted; collecting it first awards a bonus.
+One bomb is highlighted; collecting it first awards a bonus and moves the
+highlight to the next remaining bomb.
 
-## Sprite Behavior Reference
+Each level follows this rhythm:
 
-This table is reproduced from `docs/prompt notes.md` as the design reference for
-per-level sprite behavior. Timing values are target seconds from active play;
-the current implementation uses game-loop tick counters, so exact wall-clock
-seconds are approximate until timing is tied to a fixed interrupt. "At start"
-means once the `GET READY` banner has cleared.
+1. Show `GET READY`.
+2. Start active play.
+3. Spawn enemies and timed bonus items while the player collects bombs.
+4. When all bombs are collected, show `WELL DONE!`.
+5. Advance to the next arena.
 
-| Sprite | Count | Appears | Chase | Movement |
-| --- | ---: | --- | --- | --- |
-| Enemy 2 (flyer) | 1 | at start | 80% | Horizontal & Vertical |
-| Enemy 1 (walker) | 4 | one every 5 seconds | none | falls/left/right |
-| Enemy 1 (phase 2 hunter) | 3 | when reaches ground | 70%/80%/50% | Horizontal & Vertical |
-| Enemy 1 (phase 3 hunter) | 1 | when reaches ground | 80% | Horizontal & Vertical (faster) |
-| Bonus Ball | 1 | after 20 seconds | none | Diagonal |
-| Power Ball | 1 | 20 seconds after Bonus Ball is caught | none | Diagonal |
-| Energy Ball | 1 | 20 seconds after Power Ball is caught | none | Diagonal |
+## Screens And Flow
 
-## Scoring Reference
+The game opens into an attract loop:
+
+- title screen
+- hall-of-fame screen
+
+Pressing fire on the title screen starts a new game. When the final life is
+lost, qualifying scores enter the name-entry screen before returning to the
+hall of fame.
+
+## Player Rules
+
+Jacques starts each game with 3 lives.
+
+Movement is cell-based:
+
+- `Q`: move left
+- `D`: move right
+- `Space`: jump
+- standard MO5 game-extension joystick support when present
+
+Jump behavior:
+
+- pressing jump starts an upward rise
+- releasing jump ends the rise early
+- hitting the top boundary or underside of a platform ends the rise
+- holding jump while falling slows descent, making horizontal bomb collection
+  easier
+
+Jacques respawns at the starting position after losing a life.
+
+## Death And Respawn
+
+Touching an active enemy starts the death sequence unless Jacques is in respawn
+grace or the enemy is frozen and collectable.
+
+Death sequence:
+
+- gameplay movement freezes
+- Jacques flies straight up at one-third normal movement speed
+- the sprite rotates through jump-left, jump-up, and jump-right poses
+- one life is removed unless the `SQUEEPTY` cheat is active
+- if lives remain, Jacques respawns after a short hold
+- movement resumes with blinking grace
+
+When no lives remain, the game captures the final score/level for hall-of-fame
+handling, clears gameplay status from the persistent chrome, and moves into
+name entry or hall-of-fame display.
+
+## Scoring
 
 | Event | Score |
 | --- | ---: |
@@ -32,12 +76,67 @@ means once the `GET READY` banner has cleared.
 | Bonus Ball | 500 |
 | Frozen enemy | 100 |
 
-## Current Timing Model
+Normal bombs are always worth collecting. The lit bomb is the preferred order
+target and creates the higher-value route through each level.
+
+## Enemies
+
+| Sprite | Count | Appears | Chase | Movement |
+| --- | ---: | --- | --- | --- |
+| Enemy 2 (flyer) | 1 | at start | 80% | Horizontal & Vertical |
+| Enemy 1 (walker) | 4 | one every 5 seconds | none | falls/left/right |
+| Enemy 1 (phase 2 hunter) | 3 | when reaches ground | 70%/80%/50% | Horizontal & Vertical |
+| Enemy 1 (phase 3 hunter) | 1 | when reaches ground | 80% | Horizontal & Vertical (faster) |
+
+Enemy 1 begins as a falling/walking enemy. When it reaches the floor, it changes
+into a flying hunter phase. Enemy slots use different movement timing and chase
+rates so the screen pressure builds without every enemy stepping in lockstep.
+
+Enemy 2 is active from the start of play and flies horizontally and vertically.
+Most movement ticks step toward Jacques; the rest wander.
+
+## Bonus, Power, And Energy Items
+
+| Sprite | Count | Appears | Movement |
+| --- | ---: | --- | --- |
+| Bonus Ball | 1 | after 20 seconds | Diagonal |
+| Power Ball | 1 | 20 seconds after Bonus Ball is caught | Diagonal |
+| Energy Ball | 1 | 20 seconds after Power Ball is caught | Diagonal |
+
+The item chain is sequential:
+
+1. Bonus Ball can appear first and awards 500 points.
+2. Catching the Bonus Ball arms the Power Ball timer.
+3. Catching the Power Ball freezes active enemies.
+4. Catching the Power Ball also arms the Energy Ball timer.
+5. Energy Ball restores one life only when Jacques has fewer than 3 lives.
+
+Power freeze lasts about 6 seconds. During freeze, active enemies use a frozen
+replacement sprite and blink during the final 2 seconds. Frozen enemies can be
+collected for 100 points.
+
+Frozen-enemy collection has one special respawn rule:
+
+- Enemy 1 slots become inactive and return through their normal spawn cadence.
+- Enemy 2 is reactivated immediately when the freeze period ends if it was
+  collected while frozen.
+
+## Level Progression
+
+The game has ten handcrafted levels. Each level defines:
+
+- platform runs
+- bomb positions
+- the current lit-bomb order through remaining active bombs
+
+After level 10, progression wraps back to level 1.
+
+## Timing Model
 
 Until gameplay timing is tied to the MO5 50 Hz interrupt, active-play timers use
 the temporary game-loop scale `PLAY_TICKS_PER_SECOND = 17`. Timers count only
 while the game is in the playing state, so `GET READY`, death pause, title, hall
-of fame, and level-clear states do not consume spawn time.
+of fame, name entry, and level-clear states do not consume spawn time.
 
 | Event | Design Target | Current Counter |
 | --- | ---: | ---: |
@@ -46,93 +145,43 @@ of fame, and level-clear states do not consume spawn time.
 | Power Ball after Bonus Ball caught | 20 seconds | 340 active-play ticks |
 | Energy Ball after Power Ball caught | 20 seconds | 340 active-play ticks |
 
-## Current BUILD 008 Scope
+Movement remains 8x8-cell based. Step counters decide when enemies and moving
+items advance by one cell:
 
-BUILD 008 is the game feature-complete milestone. It includes title and
-hall-of-fame attract screens, name entry, ten handcrafted levels, level-clear
-and get-ready transitions, lives, death/respawn, bonus/power/energy items,
-enemy freeze, score popups, and the editable right-panel art.
+| Object | Step counter | Approximate pace at 17 ticks/sec |
+| --- | ---: | ---: |
+| Enemy 1 base walker | 5 frames | 3.4 cells/sec |
+| Enemy 1 slot variants | 4 to 7 frames | 4.25 to 2.4 cells/sec |
+| Enemy 2 flyer | 7 frames | 2.4 cells/sec |
+| Bonus/Power/Energy balls | 4 frames | 4.25 cells/sec |
+| Jacques horizontal movement | every active frame while held | up to 17 cells/sec |
 
-The `SQUEEPTY` cheat can be entered on the title or hall-of-fame screens. When
-active, lives are not decremented and `N` advances to the next level during
-gameplay.
+Enemy frame counters are staggered so fewer enemies step on the same frame.
+Timed items use their own 4-frame movement counters and enter play sequentially.
+This smooths perceived motion without changing the grid-based collision or
+drawing model. Half-cell interpolation is intentionally outside the current
+milestone.
 
-The browser sprite editor supports both 2x2 gameplay sprites and the 56x128
-right-panel `SidebarArtBitmap`.
+## Cheat
 
-## Milestone 7 Scope
+The `SQUEEPTY` cheat can be entered on the title or hall-of-fame screens.
 
-BUILD 007 turns enemy collision into a real arcade life cycle. Jacques starts
-with 3 lives. Touching either enemy enters a short death state: Jacques moves
-straight up at one-third normal movement speed, rotating between jump-left,
-jump-up, and jump-right sprites until he exits the top of the screen. One life
-is removed, and Jacques respawns at the starting position if any lives remain.
-Enemies and items remain frozen during the death animation and for two
-additional seconds after respawn. Respawn starts a two-second blinking grace
-period where enemy collisions are ignored once movement resumes.
+When active:
 
-When the final life is lost, the game displays `GAME OVER`. BUILD 008 later
-adds title flow, high-score name entry, and hall-of-fame display. Sound effects
-remain deferred.
+- enemy hits do not decrement lives
+- `N` advances to the next level during gameplay
 
-## Milestone 6 Scope
+The cheat is intentionally kept outside normal play input so it does not
+interfere with movement.
 
-BUILD 006 introduces the second enemy. The first enemy spawns from varied top
-columns with a one-second two-frame spawn effect, falls, walks when supported
-by platforms, and plays the same effect before transforming into a flying phase
-2 after reaching the bottom floor. The second enemy can fly horizontally and
-vertically; 80% of movement ticks attract it toward Jacques, while the rest
-wander.
+## Sprite Editor
 
-Touching either enemy gives the same milestone feedback: `HIT` flashes in the
-HUD and Jacques returns to the starting position. Lives, death animation, game
-over, and more elaborate enemy AI remain deferred.
+The browser sprite editor supports:
 
-## Milestone 5 Scope
+- 2x2 gameplay sprites in `src/game.asm`
+- the 56x128 right-panel `SidebarArtBitmap` in `src/sidebar_art.asm`
 
-BUILD 005 introduces the first enemy. The 2x2 enemy patrols horizontally on the
-floor at a fixed speed and reverses direction at patrol bounds.
-
-Touching the enemy gives immediate feedback by flashing `HIT` in the HUD and
-returning Jacques to the starting position. Lives, death animation, game over,
-and enemy variety remain deferred.
-
-## Milestone 4 Scope
-
-BUILD 004 introduces the highlighted bonus bomb. One active bomb is drawn with a
-distinct lit shape and color. Collecting it awards 200 points, briefly flashes
-`BONUS` in the HUD, and moves the highlight to the next remaining active bomb.
-
-Non-highlighted bombs remain collectable for 50 points. This keeps the game
-playable even when the player misses the intended bonus order.
-
-Enemies, level completion, sound effects, and more elaborate bonus chains are
-deferred.
-
-## Milestone 3 Scope
-
-BUILD 003 introduces the first collection loop. When Jacques overlaps a bomb
-cell, the bomb disappears and the visible score increases according to the
-current scoring model.
-
-The jump model is also tuned closer to Bomb Jack: Jacques rises while jump is
-held, stopping when jump is released or when he reaches the top boundary or hits
-the underside of a platform. If jump remains held during the fall, descent is
-slowed so the player can drift horizontally through a row of bombs.
-
-Bonus bombs, collection order, enemies, and win-state behavior are deliberately
-deferred.
-
-## Milestone 2 Scope
-
-BUILD 002 is the first playable movement milestone. It introduces a static arena
-with platforms and bombs, then proves the player can move left, move right,
-jump, fall under gravity, and land.
-
-## Milestone 0 Scope
-
-BUILD 001 has no gameplay. Its job is to prove that the project can assemble,
-load, take over the screen, and display a stable build label.
+The editor is a production aid, not an in-game feature.
 
 ## Style
 
