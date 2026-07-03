@@ -2,10 +2,25 @@
 ; constants.asm
 ;
 ; Shared constants for Bomb Jacques.
+;
+; `EQU` defines assembler-time names. It does not allocate RAM and it does not
+; emit bytes into the program. These names make the rest of the source read as
+; intent ("VIDEO_BANK_SELECT") instead of magic numbers ("$A7C0").
 ;==============================================================================
+
+;------------------------------------------------------------------------------
+; Program placement
+;------------------------------------------------------------------------------
 
 PROGRAM_ORIGIN      equ     $6000
 STACK_TOP           equ     $9FFF
+
+;------------------------------------------------------------------------------
+; MO5 hardware and video geometry
+;
+; The MO5 maps video memory through $0000-$1F3F. The same address range can mean
+; bitmap bytes or color bytes depending on the bank selected through $A7C0.
+;------------------------------------------------------------------------------
 
 VIDEO_BITMAP_BASE   equ     $0000
 VIDEO_COLOR_BASE    equ     VIDEO_BITMAP_BASE
@@ -21,9 +36,24 @@ VIDEO_BITMAP_BYTES  equ     8000
 VIDEO_BITMAP_WORDS  equ     4000
 VIDEO_COLOR_BYTES   equ     VIDEO_BITMAP_BYTES
 
+;------------------------------------------------------------------------------
+; Text-cell grid
+;
+; One bitmap byte contains 8 horizontal pixels. The game leans on that hardware
+; fact and treats the 320x200 screen as 40 columns by 25 rows of 8x8 cells.
+;------------------------------------------------------------------------------
+
 TEXT_CELL_HEIGHT    equ     8
 TEXT_COLUMNS        equ     40
 TEXT_ROWS           equ     25
+
+;------------------------------------------------------------------------------
+; Color attributes
+;
+; Shape and color are separate on the MO5. Sprite and glyph data contain only
+; bitmap bits; these constants are written to the color plane at matching
+; offsets.
+;------------------------------------------------------------------------------
 
 COLOR_BACKGROUND    equ     $06
 COLOR_TEXT          equ     $06
@@ -46,6 +76,13 @@ COLOR_BORDER        equ     $00
 COLOR_SIDEBAR       equ     $70
 COLOR_SIDEBAR_ART   equ     $20
 
+;------------------------------------------------------------------------------
+; Game-state machine values
+;
+; GameState is a single byte. RunGameFrame compares that byte and dispatches to
+; the matching state handler.
+;------------------------------------------------------------------------------
+
 GAME_STATE_PLAYING  equ     0
 GAME_STATE_DYING    equ     1
 GAME_STATE_GAME_OVER equ    2
@@ -57,6 +94,10 @@ GAME_STATE_TITLE   equ     7
 GAME_STATE_RESPAWN_WAIT equ 8
 ATTRACT_SCREEN_FRAMES equ   250
 CHEAT_SQUEEPTY_LEN equ     8
+
+;------------------------------------------------------------------------------
+; Sidebar and HUD layout
+;------------------------------------------------------------------------------
 
 SIDEBAR_START_COL   equ     31
 SIDEBAR_RIGHT_MARGIN_COL equ TEXT_COLUMNS-1
@@ -143,6 +184,10 @@ TITLE_START_COL    equ     6
 TITLE_START_ROW    equ     21
 TITLE_START_LEN    equ     20
 
+;------------------------------------------------------------------------------
+; Arena, platforms, bombs, and levels
+;------------------------------------------------------------------------------
+
 ARENA_LEFT_COL      equ     1
 ARENA_RIGHT_COL     equ     SIDEBAR_START_COL-1
 ARENA_TOP_ROW       equ     2
@@ -182,7 +227,14 @@ PLATFORM5_END_COL   equ     PLATFORM5_START_COL+PLATFORM5_LENGTH-1
 BOMB_COUNT          equ     18
 LEVEL_COUNT         equ     10
 
+; Active gameplay timers use this temporary scale. It is deliberately named
+; "ticks" rather than "frames" because it will eventually be replaced by a
+; 50 Hz interrupt-driven timing source.
 PLAY_TICKS_PER_SECOND equ   17
+
+;------------------------------------------------------------------------------
+; Enemy constants
+;------------------------------------------------------------------------------
 
 ENEMY_WIDTH         equ     2
 ENEMY_HEIGHT        equ     2
@@ -247,6 +299,10 @@ ENEMY_MOVE_RIGHT    equ     1
 ENEMY_MOVE_UP       equ     $FF
 ENEMY_MOVE_DOWN     equ     1
 
+;------------------------------------------------------------------------------
+; Bonus, power, and energy item constants
+;------------------------------------------------------------------------------
+
 POWER_WIDTH         equ     2
 POWER_HEIGHT        equ     2
 POWER_INACTIVE      equ     0
@@ -266,6 +322,10 @@ BONUS_ITEM_SPAWN_FRAMES equ PLAY_TICKS_PER_SECOND*20
 ENERGY_ITEM_INACTIVE equ    POWER_INACTIVE
 ENERGY_ITEM_ACTIVE  equ     POWER_ACTIVE
 ENERGY_ITEM_SPAWN_AFTER_POWER_FRAMES equ PLAY_TICKS_PER_SECOND*20
+
+;------------------------------------------------------------------------------
+; Player movement, scoring, lives, and death/respawn constants
+;------------------------------------------------------------------------------
 
 PLAYER_WIDTH        equ     2
 PLAYER_HEIGHT       equ     2
@@ -304,6 +364,13 @@ RESPAWN_WAIT_FRAMES equ     PLAY_TICKS_PER_SECOND*2
 PLAYER_RESPAWN_GRACE_FRAMES equ PLAY_TICKS_PER_SECOND*2
 PLAYER_GRACE_BLINK_MASK equ  4
 
+;------------------------------------------------------------------------------
+; Normalized input bits and MO5 keyboard matrix selectors
+;
+; Hardware can be active-low, but gameplay reads these normalized bit masks as
+; 1 = pressed. The selector values choose positions in the MO5 keyboard matrix.
+;------------------------------------------------------------------------------
+
 c1_button_up_mask    equ    %00000001
 c1_button_down_mask  equ    %00000010
 c1_button_left_mask  equ    %00000100
@@ -317,6 +384,10 @@ KEY_SPACE_SELECTOR  equ     %01000000
 NAME_KEY_ENTER      equ     $0D
 NAME_KEY_BACKSPACE  equ     $08
 NAME_KEY_SCAN_COUNT equ     28
+
+;------------------------------------------------------------------------------
+; Busy-wait timing
+;------------------------------------------------------------------------------
 
 FRAME_DELAY_OUTER   equ     16
 FRAME_DELAY_INNER   equ     160

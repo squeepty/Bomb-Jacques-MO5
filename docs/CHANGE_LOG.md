@@ -1,5 +1,34 @@
 # Change Log
 
+## Post BUILD 008 Maintenance
+
+Changed:
+
+- Split the former `src/game.asm` monolith into focused `src/game/*.asm`
+  modules while keeping `src/game.asm` as an include-order manifest.
+- Preserved the original assembler order so the split is source organization
+  only, not a gameplay or binary-layout change.
+- Updated the browser sprite editor to read and write gameplay sprites from
+  `src/game/sprites.asm`.
+- Fixed the sprite editor label parser so the final label in a sprite file is
+  handled correctly at end of file.
+- Updated README and learning docs to reference the split gameplay layout.
+
+Observed:
+
+- `tools/build.sh` passes after the split.
+- Rebuilt `build/bomb-jacques.k7` is byte-identical to
+  `downloads/bomb-jacques.k7`.
+- K7 SHA-256 remains
+  `767114b73b45c30f6c466a595cbfef49acb850e4d4c5ae27b607bef02aed0cf8`.
+- Sprite editor API smoke test reads 25 gameplay sprites and 896 sidebar art
+  bytes.
+- No regression issue found after review/testing of the split.
+
+Status:
+
+- Conservative source-organization cleanup complete.
+
 ## BUILD 008
 
 Added:

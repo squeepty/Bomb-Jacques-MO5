@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(TOOL_DIR, "..");
-const GAME_ASM = path.join(ROOT_DIR, "src", "game.asm");
+const GAME_SPRITES_ASM = path.join(ROOT_DIR, "src", "game", "sprites.asm");
 const SIDEBAR_ART_ASM = path.join(ROOT_DIR, "src", "sidebar_art.asm");
 const PAGE_FILE = path.join(TOOL_DIR, "sprite-editor.html");
 const BUILD_SCRIPT = path.join(TOOL_DIR, "build.sh");
@@ -56,7 +56,7 @@ function findSpriteDef(id) {
 }
 
 function labelBlock(source, label) {
-  const pattern = new RegExp(`^${escapeRegExp(label)}:\\n([\\s\\S]*?)(?=^[A-Za-z_][A-Za-z0-9_]*:|\\z)`, "m");
+  const pattern = new RegExp(`^${escapeRegExp(label)}:\\n([\\s\\S]*?)(?=^[A-Za-z_][A-Za-z0-9_]*:|(?![\\s\\S]))`, "m");
   const match = source.match(pattern);
   if (!match) {
     throw new Error(`Missing sprite label: ${label}`);
@@ -105,7 +105,7 @@ function formatBitmapByte(byte) {
 }
 
 function replaceLabelRows(source, label, rows, groupSize) {
-  const pattern = new RegExp(`^${escapeRegExp(label)}:\\n[\\s\\S]*?(?=^[A-Za-z_][A-Za-z0-9_]*:|\\z)`, "m");
+  const pattern = new RegExp(`^${escapeRegExp(label)}:\\n[\\s\\S]*?(?=^[A-Za-z_][A-Za-z0-9_]*:|(?![\\s\\S]))`, "m");
   let replaced = false;
   const nextSource = source.replace(pattern, () => {
     replaced = true;
@@ -261,7 +261,7 @@ function sendError(response, statusCode, error) {
 
 async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/sprites") {
-    const source = await fs.readFile(GAME_ASM, "utf8");
+    const source = await fs.readFile(GAME_SPRITES_ASM, "utf8");
     sendJson(response, 200, { sprites: SPRITES.map((sprite) => spritePayload(source, sprite)) });
     return;
   }
@@ -296,11 +296,11 @@ async function handleApi(request, response, url) {
     }
 
     const body = await readRequestJson(request);
-    const currentSource = await fs.readFile(GAME_ASM, "utf8");
+    const currentSource = await fs.readFile(GAME_SPRITES_ASM, "utf8");
     const nextSource = writeSprite(currentSource, sprite, body.rows);
-    await fs.writeFile(GAME_ASM, nextSource, "utf8");
+    await fs.writeFile(GAME_SPRITES_ASM, nextSource, "utf8");
     const build = await runBuild();
-    const savedSource = await fs.readFile(GAME_ASM, "utf8");
+    const savedSource = await fs.readFile(GAME_SPRITES_ASM, "utf8");
     sendJson(response, 200, {
       sprite: spritePayload(savedSource, sprite),
       build,

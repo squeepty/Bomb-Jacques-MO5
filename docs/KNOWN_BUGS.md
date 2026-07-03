@@ -2,8 +2,12 @@
 
 ## BUILD 008 / Current
 
-- No blocking gameplay bugs are currently known after the
-  `milestone-game-feature-complete` commit.
+- No blocking gameplay bugs are currently known after
+  `milestone-game-rom-initial-version` and the later conservative `src/game/`
+  split verification.
+- No regression issue was found after splitting the former `src/game.asm`
+  monolith; the rebuilt K7 remains byte-identical to the tracked downloadable
+  cassette image.
 - Final DCMOTO play-through verification is still recommended across all ten
   levels.
 - Timing still uses the temporary busy-wait loop and

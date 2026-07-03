@@ -293,13 +293,29 @@ stack, and includes the rest of the assembly files.
 | `src/memory.asm` | Memory-layout comments and assumptions. |
 | `src/video.asm` | MO5 video-plane selection, screen clearing, cell drawing, font drawing, text positioning, and sidebar art drawing. |
 | `src/input.asm` | Keyboard matrix scanning, optional joystick PIA setup, held/press input state, and name-entry scanning. |
-| `src/game.asm` | Game state machine, player logic, enemies, items, collision, score/lives, rendering orchestration, sprite data, text strings, and mutable variables. |
+| `src/game.asm` | Gameplay include manifest. Keeps the original assembler order while delegating implementation to `src/game/*.asm`. |
+| `src/game/flow.asm` | Game initialization, attract/title/hall flow, main frame dispatch, and render-state snapshots. |
+| `src/game/level_setup.asm` | Level reset, platform/bomb table selection, player/enemy/item reset, and bomb reset. |
+| `src/game/items.asm` | Bonus, power, energy item movement, collection, freeze timing, and item seeds. |
+| `src/game/enemies.asm` | Enemy 1 slot scheduling, enemy phases, enemy 2 flight, chase/wander logic, and enemy seeds. |
+| `src/game/player_movement.asm` | Player horizontal movement, jump/fall logic, platform checks, and footprint blocking helpers. |
+| `src/game/collection_death.asm` | Bomb collection, frozen enemy collection, enemy collision, death, respawn, and game-over entry. |
+| `src/game/scoring_hall.asm` | Score addition, hall-of-fame defaults, score comparison, name entry, and score insertion. |
+| `src/game/level_flow.asm` | Lit-bomb selection, score popup timers, level clear, get-ready, and next-level transitions. |
+| `src/game/rendering.asm` | Title, HUD, sidebar, arena, enemies, items, bombs, player, text, and erase/redraw helpers. |
+| `src/game/tables.asm` | Wait loop, spawn tables, text strings, hall entries, color tables, and included level/sidebar data. |
+| `src/game/sprites.asm` | 8x8 cell art, 2x2 gameplay sprites, player sprite table, item art, and enemy art. |
+| `src/game/state.asm` | Mutable gameplay variables allocated with `FCB`/`FDB`. |
 | `src/levels.asm` | Platform and bomb data for the ten handcrafted levels. |
 | `src/sidebar_art.asm` | 56x128 right-panel bitmap art. |
 
 The project currently assembles as one continuous unit. There is no separate
 linker script. This makes labels easy to follow while learning, but it also
 means shared label names should stay explicit and descriptive.
+
+The `src/game/` split was done as a conservative source-organization pass:
+`src/game.asm` preserves the old assembler order, and the rebuilt K7 was
+verified byte-identical to the tracked downloadable cassette image.
 
 ## Memory And Video Model
 
@@ -356,7 +372,7 @@ tables.
 
 The local browser sprite editor edits:
 
-- 2x2 gameplay sprites in `src/game.asm`
+- 2x2 gameplay sprites in `src/game/sprites.asm`
 - the 56x128 right-panel `SidebarArtBitmap` in `src/sidebar_art.asm`
 
 Run it with:
@@ -447,7 +463,7 @@ Useful searches:
 
 ```sh
 rg "RunGameFrame" src
-rg "PlayerSpriteTable" src/game.asm
+rg "PlayerSpriteTable" src/game/sprites.asm
 rg "VIDEO_BANK_SELECT" src docs
 rg "POWER_FREEZE_FRAMES" src docs
 ```

@@ -3,8 +3,15 @@
 ;
 ; Platform and bomb coordinate tables for the milestone 8 handcrafted level pass.
 ; Each platform row stores row,start,length. Each bomb row stores column,row.
+;
+; These are pure data tables. Gameplay code indexes LevelPlatformTable and
+; LevelBombTable by CurrentLevel, copies the selected platform records into the
+; mutable CurrentPlatform... variables, and points CurrentBombPositions at the
+; selected bomb coordinate list.
 ;==============================================================================
 
+; Each FDB is a 16-bit address. CurrentLevel is multiplied by two before reading
+; these tables because each pointer occupies two bytes.
 LevelPlatformTable:
         fdb     Level1Platforms
         fdb     Level2Platforms
@@ -30,6 +37,9 @@ LevelBombTable:
         fdb     Level10BombPositions
 
 Level1Platforms:
+        ; Platform records are compact because every level has exactly
+        ; PLATFORM_RUN_COUNT rows. DrawPlatformRun expands each record into left
+        ; cap, middle cells, and right cap at render time.
         fcb     19,4,6
         fcb     20,19,10
         fcb     16,15,7
@@ -100,6 +110,8 @@ Level10Platforms:
         fcb     7,21,7
 
 Level1BombPositions:
+        ; Bomb records are column,row pairs. BOMB_COUNT controls how many pairs
+        ; the collection and drawing loops read from each level table.
         fcb     5,2
         fcb     9,2
         fcb     13,2

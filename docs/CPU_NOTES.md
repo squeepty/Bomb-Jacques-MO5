@@ -332,6 +332,6 @@ to the matching handler.
 The renderer compares current and previous state. If something changed, it
 erases the old sprite footprint, redraws the restored static cells, and draws
 the new sprite. This is why compare and branch instructions are everywhere in
-`game.asm`.
+the gameplay modules under `src/game/`.
 
 Every routine documents its inputs, outputs, modified registers, and algorithm.

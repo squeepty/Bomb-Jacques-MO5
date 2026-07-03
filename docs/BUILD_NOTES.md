@@ -97,13 +97,20 @@ Important includes:
 | `src/memory.asm` | Memory-layout comments and project memory assumptions. |
 | `src/video.asm` | MO5 bitmap/color-plane selection, cell drawing, font drawing, and screen clearing. |
 | `src/input.asm` | Keyboard and joystick input scanning. |
-| `src/game.asm` | Game state, gameplay logic, rendering orchestration, sprite data, strings, and variables. |
+| `src/game.asm` | Gameplay include manifest that preserves assembler order. |
+| `src/game/*.asm` | Split gameplay modules for flow, setup, items, enemies, movement, collision/death, scoring/name entry, level flow, rendering, tables, sprites, and mutable state. |
 | `src/levels.asm` | Platform and bomb tables for the ten levels. |
 | `src/sidebar_art.asm` | Right-panel bitmap art. |
 
 Because the code is included into one assembly unit, labels can refer to each
 other across files after inclusion. This keeps the current educational build
 simple, but it also means global label names should stay descriptive.
+
+The `src/game/` split is intentionally conservative. `src/game.asm` includes
+the smaller gameplay files in the same order the old monolithic file used, so a
+successful split should rebuild to the same bytes. After the initial split,
+`build/bomb-jacques.k7` was verified byte-identical to
+`downloads/bomb-jacques.k7`.
 
 ## Reading Build Output
 

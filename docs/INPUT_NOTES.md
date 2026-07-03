@@ -257,7 +257,8 @@ state, either device can control Jacques.
 
 ## Gameplay Consumers
 
-The game reads the normalized bytes in `src/game.asm`.
+The gameplay modules under `src/game/` read the normalized bytes through the
+`src/game.asm` include manifest.
 
 | Routine | Input checked | Purpose |
 | --- | --- | --- |
@@ -353,8 +354,8 @@ To add a new keyboard gameplay action:
 1. Add or identify a selector constant in `src/constants.asm`.
 2. Extend `ReadKeyboardHardware` to scan that selector.
 3. OR the matching normalized bit into `Dpad_Read` or `Fire_Read`.
-4. Consume `Held` or `Press` in `src/game.asm`, depending on the intended
-   behavior.
+4. Consume `Held` or `Press` in the appropriate `src/game/*.asm` module,
+   depending on the intended behavior.
 
 Use `Held` for continuous actions and `Press` for one-shot actions.
 

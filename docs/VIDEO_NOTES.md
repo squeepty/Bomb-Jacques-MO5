@@ -1,8 +1,8 @@
 # Video Notes
 
 This document explains how Bomb Jacques draws to the Thomson MO5 display. It is
-a learning companion for `src/video.asm`, the drawing helpers in `src/game.asm`,
-and the video constants in `src/constants.asm`.
+a learning companion for `src/video.asm`, the drawing helpers in
+`src/game/rendering.asm`, and the video constants in `src/constants.asm`.
 
 ## Display Model
 

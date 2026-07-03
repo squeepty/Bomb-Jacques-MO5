@@ -178,7 +178,7 @@ interfere with movement.
 
 The browser sprite editor supports:
 
-- 2x2 gameplay sprites in `src/game.asm`
+- 2x2 gameplay sprites in `src/game/sprites.asm`
 - the 56x128 right-panel `SidebarArtBitmap` in `src/sidebar_art.asm`
 
 The editor is a production aid, not an in-game feature.

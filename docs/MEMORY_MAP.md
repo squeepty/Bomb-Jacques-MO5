@@ -123,8 +123,9 @@ source files:
         include "game.asm"
 ```
 
-Because these files are included into one assembly stream, the final binary
-contains:
+`src/game.asm` is now a manifest that includes smaller files under `src/game/`
+without changing assembler order. Because all of these files are included into
+one assembly stream, the final binary contains:
 
 1. code
 2. read-only tables
@@ -133,8 +134,8 @@ contains:
 5. writable state bytes
 
 There is not yet a separate linker script or fixed RAM block for all variables.
-The labels near the end of `src/input.asm` and `src/game.asm` allocate writable
-bytes with `FCB`/`FDB`.
+The labels near the end of `src/input.asm` and `src/game/state.asm` allocate
+writable bytes with `FCB`/`FDB`.
 
 ## Writable State
 

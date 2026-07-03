@@ -3,6 +3,15 @@
 ;
 ; 56x128 monochrome sidebar decoration generated from the Bomb Jack reference.
 ; Each row stores 7 bytes for the right panel bitmap, leaving black margins.
+;
+; The bytes are written directly to the bitmap plane by DrawSidebarArt. The
+; matching color footprint is filled separately with COLOR_SIDEBAR_ART, so this
+; table only stores shape bits.
+;
+; Reading a row:
+;   7 bytes * 8 pixels = 56 horizontal pixels
+;   bit 7 of each byte is the leftmost pixel in that byte
+;   1 = foreground pixel, 0 = background pixel
 ;==============================================================================
 
 SidebarArtBitmap:

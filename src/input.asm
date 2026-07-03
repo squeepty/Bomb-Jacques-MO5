@@ -2,6 +2,13 @@
 ; input.asm
 ;
 ; BUILD 008 input routines.
+;
+; The rest of the game reads normalized input bytes instead of raw hardware
+; ports. That keeps keyboard fallback and optional joystick hardware hidden
+; behind one small interface:
+;
+;   Dpad_Held / Fire_Held   = buttons currently down
+;   Dpad_Press / Fire_Press = buttons newly pressed this frame
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -14,8 +21,11 @@
 ;   A, B, D
 ;------------------------------------------------------------------------------
 InitInput:
+        ; The joystick PIA must be configured before reads are meaningful.
         jsr     InitJoypadPia
 
+        ; LDD #$0000 sets A and B to zero. STD then clears two adjacent bytes,
+        ; which is a common 6809 convenience for small state structs.
         ldd     #$0000
         std     Joypads_Read
         std     Joypads_Held
@@ -39,6 +49,9 @@ InitInput:
 ;   A, B
 ;------------------------------------------------------------------------------
 InitJoypadPia:
+        ; PIA control bit 2 selects whether the port address accesses the data
+        ; direction register or the data register. Clear it, write $00 to make
+        ; all bits inputs, then set bit 2 again for normal reads.
         lda     JOYPAD_CRA
         anda    #$FB
         sta     JOYPAD_CRA
@@ -70,12 +83,18 @@ InitJoypadPia:
 ;   A, B, D
 ;------------------------------------------------------------------------------
 ReadInput:
+        ; Start from no buttons pressed, then OR in every available input
+        ; device. Keyboard and joystick can both control Jacques.
         ldd     #$0000
         std     Joypads_Read
 
         jsr     ReadJoypadHardware
         jsr     ReadKeyboardHardware
 
+        ; Edge detection:
+        ;   changed = Held XOR Read
+        ;   pressed = changed AND Read
+        ; Bits that stayed down are held but not newly pressed.
         ldd     Joypads_Held
         eora    Dpad_Read
         eorb    Fire_Read
@@ -97,6 +116,8 @@ ReadInput:
 ;   A, B
 ;------------------------------------------------------------------------------
 ReadJoypadHardware:
+        ; The joystick extension is active-low: pressed bits read as 0. COMA
+        ; flips that into the normalized game convention, 1 = pressed.
         lda     JOYPAD_DPAD_PORT
         coma
         anda    #$0F
@@ -123,6 +144,8 @@ ReadJoypadHardware:
 ;   A
 ;------------------------------------------------------------------------------
 ReadKeyboardHardware:
+        ; Keyboard scanning is matrix-based. Store a selector byte, read the
+        ; port back, and test bit 7. A zero bit means the selected key is down.
         lda     #KEY_Q_SELECTOR
         sta     KEYBOARD_PORT
         lda     KEYBOARD_PORT
@@ -168,6 +191,8 @@ ReadKeyboardDone:
 ;   A, B, X
 ;------------------------------------------------------------------------------
 ReadNameKeyboardHardware:
+        ; Name entry needs many keys, so it uses a table of selector/output
+        ; pairs instead of hardcoding one test per key.
         clr     NameKey_Read
         clr     NameKey_Press
         ldx     #NameKeyboardTable
@@ -175,6 +200,8 @@ ReadNameKeyboardHardware:
         stb     NameKeyScanRemaining
 
 ReadNameKeyboardLoop:
+        ; X points at the selector byte. `,x+` reads it and advances X to the
+        ; output character stored beside it.
         lda     ,x+
         sta     KEYBOARD_PORT
         lda     KEYBOARD_PORT
@@ -191,6 +218,8 @@ ReadNameKeyboardNext:
         bne     ReadNameKeyboardLoop
 
 ReadNameKeyboardCompare:
+        ; Convert the raw "currently down" key into a one-shot NameKey_Press.
+        ; Holding a key will not type repeated letters.
         lda     NameKey_Read
         beq     ReadNameKeyboardNoKey
         cmpa    NameKey_Held
@@ -232,7 +261,8 @@ NameKey_Press:
 NameKeyScanRemaining:
         fcb     $00
 
-; Selector bytes come from the MO5 monitor TABASC key order.
+; Selector bytes come from the MO5 monitor TABASC key order. Each entry is:
+;   selector byte, ASCII/control byte returned to name-entry code.
 NameKeyboardTable:
         fcb     $5A,'A'
         fcb     $44,'B'

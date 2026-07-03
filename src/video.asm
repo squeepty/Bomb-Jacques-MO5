@@ -2,6 +2,11 @@
 ; video.asm
 ;
 ; BUILD 008 video routines for the Thomson MO5 bitmap display.
+;
+; The MO5 display used here has two conceptual planes at the same address
+; window: bitmap bits and color attributes. Most routines follow the pattern:
+; select bitmap plane, write shape bytes, select color plane, write matching
+; color bytes, then return to bitmap plane for the next caller.
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -14,6 +19,9 @@
 ;   A
 ;------------------------------------------------------------------------------
 SelectBitmapPlane:
+        ; Preserve all $A7C0 bits except bit 0. Other hardware state may share
+        ; this PIA byte, so the code reads-modifies-writes instead of storing a
+        ; literal value.
         lda     VIDEO_BANK_SELECT
         ora     #$01
         sta     VIDEO_BANK_SELECT
@@ -53,6 +61,8 @@ ClearScreen:
         ldy     #VIDEO_BITMAP_WORDS
 
 ClearBitmapLoop:
+        ; STD writes two bytes at a time. 4000 word stores clear 8000 bitmap
+        ; bytes faster than 8000 single-byte stores.
         std     ,x++
         leay    -1,y
         bne     ClearBitmapLoop
@@ -90,6 +100,8 @@ ClearColorLoop:
 ;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 DrawCellPattern:
+        ; CellAddress returns the same offset in X and Y. Because the MO5 planes
+        ; are banked, the address is the same; only the selected plane changes.
         jsr     CellAddress
 
         pshs    x,u
@@ -100,6 +112,8 @@ DrawCellPattern:
         ldb     #TEXT_CELL_HEIGHT
 
 DrawCellBitmapRow:
+        ; One 8x8 cell consumes one byte per scanline. Add 40 bytes to move from
+        ; one pixel row to the next row in the same cell column.
         lda     ,u+
         sta     ,x
         leax    VIDEO_BYTES_PER_ROW,x
@@ -142,6 +156,9 @@ DrawCellColorRow:
 ;   A, B, X, U
 ;------------------------------------------------------------------------------
 DrawCellPatternMasked:
+        ; Masked draws are for moving objects. Zero source rows leave both
+        ; bitmap and color alone, so sprites can sit over the arena without
+        ; repainting their transparent rows.
         jsr     CellAddress
 
         pshs    x,u
@@ -154,6 +171,8 @@ DrawCellPatternMasked:
 DrawCellMaskedBitmapRow:
         lda     ,u+
         beq     DrawCellMaskedBitmapNext
+        ; OR merges foreground bits into the existing byte. Erase/redraw code
+        ; restores the background later when a sprite moves away.
         ora     ,x
         sta     ,x
 
@@ -205,6 +224,8 @@ DrawCellMaskedColorNext:
 ;   4. Advance one screen byte to the next cell and repeat until zero.
 ;------------------------------------------------------------------------------
 DrawString:
+        ; DrawString assumes callers have already prepared color attributes for
+        ; the text area when they need non-default colors.
         jsr     CellAddress
 
 DrawStringNext:
@@ -283,6 +304,8 @@ DrawStringDown4Done:
 ;   A lookup table keeps this easy to read and avoids early arithmetic tricks.
 ;------------------------------------------------------------------------------
 CellAddress:
+        ; Save the column while B is transformed into a word-table offset.
+        ; Pushing A is smaller and clearer here than reserving a scratch byte.
         pshs    a
         lslb
         clra
@@ -345,6 +368,8 @@ TextRowOffsets:
 ;   3. Copy 8 glyph bytes, one per bitmap row.
 ;------------------------------------------------------------------------------
 DrawGlyphAtCell:
+        ; The glyph table stores uppercase shapes only. Lowercase ASCII is
+        ; converted by subtracting 32 before the lookup chain.
         cmpa    #'a'
         blo     DrawGlyphFind
         cmpa    #'z'
@@ -597,6 +622,8 @@ DrawGlyphCopyShiftRight4:
 DrawGlyphShiftRight4Row:
         lda     ,u+
         pshs    a
+        ; Shifted text splits one 8-pixel glyph row across two neighboring video
+        ; bytes: upper nibble into the current byte, lower nibble into the next.
         lsra
         lsra
         lsra

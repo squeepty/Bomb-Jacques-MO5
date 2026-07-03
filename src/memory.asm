@@ -2,6 +2,10 @@
 ; memory.asm
 ;
 ; Memory notes for BUILD 008.
+;
+; This file does not allocate memory. It lives near the top of the include list
+; as a reminder of the address contract shared by code, build script, DCMOTO,
+; and the K7 wrapper.
 ;==============================================================================
 
 ; The program is assembled for PROGRAM_ORIGIN ($6000). The stack is initialized

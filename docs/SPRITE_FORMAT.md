@@ -1,8 +1,8 @@
 # Sprite Format
 
 This document explains how Bomb Jacques stores and draws sprite art. It is a
-learning companion for the `Cell...` labels in `src/game.asm`, the glyph labels
-in `src/video.asm`, and the sidebar bitmap in `src/sidebar_art.asm`.
+learning companion for the `Cell...` labels in `src/game/sprites.asm`, the glyph
+labels in `src/video.asm`, and the sidebar bitmap in `src/sidebar_art.asm`.
 
 ## The Basic 8x8 Cell
 
@@ -310,5 +310,5 @@ When editing by hand:
 
 The browser sprite editor can edit both:
 
-- gameplay 2x2 sprites in `src/game.asm`
+- gameplay 2x2 sprites in `src/game/sprites.asm`
 - the right-panel bitmap in `src/sidebar_art.asm`
