@@ -19,6 +19,10 @@
       --yellow: #f0c947;
       --green: #2f8f5b;
       --danger: #bd3c2f;
+      --sidebar-art-bg: #000000;
+      --sidebar-art-pixel: #39d353;
+      --sidebar-art-grid-line: rgba(57, 211, 83, 0.14);
+      --sidebar-art-block-line: rgba(255, 176, 0, 0.34);
     }
 
     * {
@@ -182,6 +186,7 @@
 
     .sprite-preview.sidebar-art-list-preview {
       height: 72px;
+      background: var(--sidebar-art-bg);
     }
 
     .sprite-name {
@@ -233,9 +238,12 @@
       align-items: center;
       gap: 8px;
       flex: 0 0 auto;
+      justify-content: flex-end;
+      flex-wrap: wrap;
     }
 
-    .edit-tools {
+    .edit-tools,
+    .zoom-control {
       display: flex;
       gap: 4px;
       padding: 3px;
@@ -244,7 +252,8 @@
       background: #1e2225;
     }
 
-    .tool-button {
+    .tool-button,
+    .zoom-button {
       min-width: 58px;
       height: 30px;
       border: 1px solid transparent;
@@ -255,13 +264,19 @@
       font-weight: 650;
     }
 
-    .tool-button.selected {
+    .zoom-button {
+      min-width: 42px;
+    }
+
+    .tool-button.selected,
+    .zoom-button.selected {
       border-color: #151515;
       background: var(--cyan-soft);
       color: var(--ink);
     }
 
-    .tool-button:disabled {
+    .tool-button:disabled,
+    .zoom-button:disabled {
       opacity: 0.45;
       cursor: default;
     }
@@ -291,17 +306,16 @@
     .workbench {
       min-width: 0;
       min-height: 0;
-      display: grid;
-      place-items: center;
       padding: 24px;
-      overflow: hidden;
+      overflow: auto;
     }
 
     .edit-stage {
-      width: 100%;
-      min-width: 0;
+      width: max-content;
+      min-width: 100%;
+      min-height: 100%;
       display: grid;
-      grid-template-columns: 104px minmax(0, auto);
+      grid-template-columns: 104px max-content;
       align-items: center;
       justify-content: center;
       gap: 24px;
@@ -328,6 +342,8 @@
     .real-preview-shell.sidebar-art-preview-shell {
       width: 96px;
       height: 216px;
+      border-color: var(--sidebar-art-block-line);
+      background: var(--sidebar-art-bg);
     }
 
     .real-preview.sidebar-art-preview {
@@ -336,12 +352,7 @@
     }
 
     .pixel-grid {
-      width: min(calc(100vh - 128px), calc(100vw - 488px), 680px);
-      min-width: min(320px, calc(100vw - 456px));
-      aspect-ratio: 1;
       display: grid;
-      grid-template-columns: repeat(16, minmax(0, 1fr));
-      grid-template-rows: repeat(16, minmax(0, 1fr));
       border: 2px solid var(--ink);
       background: var(--ink);
       touch-action: none;
@@ -349,11 +360,8 @@
     }
 
     .pixel-grid.sidebar-art-grid {
-      width: min(calc((100vh - 128px) * 0.4375), calc(100vw - 488px), 340px);
-      min-width: min(224px, calc(100vw - 456px));
-      aspect-ratio: 7 / 16;
-      grid-template-columns: repeat(56, minmax(0, 1fr));
-      grid-template-rows: repeat(128, minmax(0, 1fr));
+      border-color: var(--sidebar-art-block-line);
+      background: var(--sidebar-art-bg);
     }
 
     .pixel {
@@ -371,12 +379,38 @@
       background: var(--ink);
     }
 
+    .pixel-grid.sidebar-art-grid .pixel {
+      border-right-color: var(--sidebar-art-grid-line);
+      border-bottom-color: var(--sidebar-art-grid-line);
+      background: var(--sidebar-art-bg);
+    }
+
+    .pixel-grid.sidebar-art-grid .pixel.on {
+      background: var(--sidebar-art-pixel);
+    }
+
     .pixel.split-x {
       border-left: 3px solid var(--ink);
     }
 
     .pixel.split-y {
       border-top: 3px solid var(--ink);
+    }
+
+    .pixel-grid.sidebar-art-grid .pixel.split-x {
+      border-left: 0;
+      box-shadow: inset 1px 0 0 var(--sidebar-art-block-line);
+    }
+
+    .pixel-grid.sidebar-art-grid .pixel.split-y {
+      border-top: 0;
+      box-shadow: inset 0 1px 0 var(--sidebar-art-block-line);
+    }
+
+    .pixel-grid.sidebar-art-grid .pixel.split-x.split-y {
+      box-shadow:
+        inset 1px 0 0 var(--sidebar-art-block-line),
+        inset 0 1px 0 var(--sidebar-art-block-line);
     }
 
     .pixel:hover {
@@ -422,8 +456,13 @@
         flex-direction: column;
       }
 
+      .actions {
+        justify-content: flex-start;
+      }
+
       .edit-stage {
-        grid-template-columns: 1fr;
+        grid-template-columns: max-content;
+        justify-items: center;
         gap: 16px;
       }
 
@@ -435,16 +474,6 @@
       .real-preview-shell.sidebar-art-preview-shell {
         width: 84px;
         height: 192px;
-      }
-
-      .pixel-grid {
-        width: min(calc(100vh - 420px), 92vw, 560px);
-        min-width: 0;
-      }
-
-      .pixel-grid.sidebar-art-grid {
-        width: min(calc((100vh - 420px) * 0.4375), 76vw, 300px);
-        min-width: 0;
       }
     }
   </style>
@@ -470,6 +499,11 @@
           <div id="selectedLabels" class="selected-labels"></div>
         </div>
         <div class="actions">
+          <div class="zoom-control" role="group" aria-label="Zoom">
+            <button class="zoom-button selected" type="button" data-zoom="1" aria-pressed="true" title="Zoom 1x">1x</button>
+            <button class="zoom-button" type="button" data-zoom="2" aria-pressed="false" title="Zoom 2x">2x</button>
+            <button class="zoom-button" type="button" data-zoom="4" aria-pressed="false" title="Zoom 4x">4x</button>
+          </div>
           <div class="edit-tools" role="group" aria-label="Pixel tool">
             <button id="drawToolButton" class="tool-button selected" type="button" aria-pressed="true" title="Draw pixels">Draw</button>
             <button id="eraseToolButton" class="tool-button" type="button" aria-pressed="false" title="Erase pixels">Erase</button>
@@ -504,9 +538,18 @@
     const undoButton = document.getElementById("undoButton");
     const saveButton = document.getElementById("saveButton");
     const statusEl = document.getElementById("status");
+    const zoomButtons = [...document.querySelectorAll("[data-zoom]")];
+    const rootStyles = getComputedStyle(document.documentElement);
 
     const MODE_SPRITES = "sprites";
     const MODE_SIDEBAR_ART = "sidebar-art";
+    const ZOOM_LEVELS = [1, 2, 4];
+    const SPRITE_BASE_PIXEL_SIZE = 36;
+    const SIDEBAR_ART_BASE_PIXEL_SIZE = 6;
+    const SPRITE_BACKGROUND_COLOR = rootStyles.getPropertyValue("--cyan-soft").trim() || "#aef2f5";
+    const SPRITE_PIXEL_COLOR = rootStyles.getPropertyValue("--ink").trim() || "#111214";
+    const SIDEBAR_ART_BACKGROUND_COLOR = rootStyles.getPropertyValue("--sidebar-art-bg").trim() || "#000000";
+    const SIDEBAR_ART_PIXEL_COLOR = rootStyles.getPropertyValue("--sidebar-art-pixel").trim() || "#39d353";
 
     const state = {
       mode: MODE_SPRITES,
@@ -520,6 +563,7 @@
       tool: "draw",
       painting: false,
       paintValue: true,
+      zoom: 1,
     };
 
     function setStatus(text, tone = "") {
@@ -541,6 +585,11 @@
 
     function currentHeight() {
       return state.mode === MODE_SIDEBAR_ART ? state.sidebarArt?.height ?? 128 : 16;
+    }
+
+    function currentPixelSize() {
+      const baseSize = state.mode === MODE_SIDEBAR_ART ? SIDEBAR_ART_BASE_PIXEL_SIZE : SPRITE_BASE_PIXEL_SIZE;
+      return baseSize * state.zoom;
     }
 
     function rowsToPixels(rows) {
@@ -613,9 +662,9 @@
       canvas.width = 32;
       canvas.height = 32;
       context.imageSmoothingEnabled = false;
-      context.fillStyle = "#aef2f5";
+      context.fillStyle = SPRITE_BACKGROUND_COLOR;
       context.fillRect(0, 0, 32, 32);
-      context.fillStyle = "#111214";
+      context.fillStyle = SPRITE_PIXEL_COLOR;
       for (let y = 0; y < 16; y += 1) {
         for (let x = 0; x < 16; x += 1) {
           if (pixels[y * 16 + x]) {
@@ -631,9 +680,9 @@
       canvas.width = art.width;
       canvas.height = art.height;
       context.imageSmoothingEnabled = false;
-      context.fillStyle = "#aef2f5";
+      context.fillStyle = SIDEBAR_ART_BACKGROUND_COLOR;
       context.fillRect(0, 0, art.width, art.height);
-      context.fillStyle = "#111214";
+      context.fillStyle = SIDEBAR_ART_PIXEL_COLOR;
       for (let y = 0; y < art.height; y += 1) {
         for (let x = 0; x < art.width; x += 1) {
           if (pixels[y * art.width + x]) {
@@ -652,9 +701,9 @@
       realPreview.classList.toggle("sidebar-art-preview", state.mode === MODE_SIDEBAR_ART);
       realPreviewShell.classList.toggle("sidebar-art-preview-shell", state.mode === MODE_SIDEBAR_ART);
       context.imageSmoothingEnabled = false;
-      context.fillStyle = "#aef2f5";
+      context.fillStyle = state.mode === MODE_SIDEBAR_ART ? SIDEBAR_ART_BACKGROUND_COLOR : SPRITE_BACKGROUND_COLOR;
       context.fillRect(0, 0, width, height);
-      context.fillStyle = "#111214";
+      context.fillStyle = state.mode === MODE_SIDEBAR_ART ? SIDEBAR_ART_PIXEL_COLOR : SPRITE_PIXEL_COLOR;
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
           if (state.pixels[y * width + x]) {
@@ -741,15 +790,29 @@
       eraseToolButton.setAttribute("aria-pressed", state.tool === "erase" ? "true" : "false");
       drawToolButton.disabled = !hasSelection || state.saving;
       eraseToolButton.disabled = !hasSelection || state.saving;
+      updateZoomButtons();
+    }
+
+    function updateZoomButtons() {
+      const hasSelection = hasEditableSelection();
+      zoomButtons.forEach((button) => {
+        const selected = Number(button.dataset.zoom) === state.zoom;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+        button.disabled = !hasSelection || state.saving;
+      });
     }
 
     function renderGrid() {
       const width = currentWidth();
       const height = currentHeight();
+      const pixelSize = currentPixelSize();
       pixelGrid.replaceChildren();
       pixelGrid.classList.toggle("sidebar-art-grid", state.mode === MODE_SIDEBAR_ART);
-      pixelGrid.style.gridTemplateColumns = `repeat(${width}, minmax(0, 1fr))`;
-      pixelGrid.style.gridTemplateRows = `repeat(${height}, minmax(0, 1fr))`;
+      pixelGrid.style.width = `${width * pixelSize}px`;
+      pixelGrid.style.height = `${height * pixelSize}px`;
+      pixelGrid.style.gridTemplateColumns = `repeat(${width}, ${pixelSize}px)`;
+      pixelGrid.style.gridTemplateRows = `repeat(${height}, ${pixelSize}px)`;
       pixelGrid.setAttribute("aria-label", state.mode === MODE_SIDEBAR_ART ? "Right panel art pixel grid" : "2 by 2 sprite pixel grid");
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
@@ -891,6 +954,7 @@
       renderModeTabs();
       renderList();
       renderSelection();
+      updateZoomButtons();
     }
 
     function setDirtyFromPixels() {
@@ -1060,6 +1124,17 @@
       saveSprite();
     }
 
+    function setZoom(zoom) {
+      if (!ZOOM_LEVELS.includes(zoom) || zoom === state.zoom) {
+        return;
+      }
+
+      state.painting = false;
+      state.zoom = zoom;
+      renderSelection();
+      updateZoomButtons();
+    }
+
     spriteList.addEventListener("click", (event) => {
       const item = event.target.closest(".sprite-item");
       if (!item) {
@@ -1089,6 +1164,12 @@
     eraseToolButton.addEventListener("click", () => {
       state.tool = "erase";
       updateToolButtons();
+    });
+
+    zoomButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setZoom(Number(button.dataset.zoom));
+      });
     });
 
     pixelGrid.addEventListener("contextmenu", (event) => {

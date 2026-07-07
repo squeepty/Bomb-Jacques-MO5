@@ -180,7 +180,7 @@ HallDefaultEntry2:
         fcc     "08 PROUDLY    5000"
         fcb     0
 HallDefaultEntry3:
-        fcc     "06 PRESENT    4000"
+        fcc     "06 PRESENTS   4000"
         fcb     0
 HallDefaultEntry4:
         fcc     "04 BOMB       3000"
@@ -196,7 +196,7 @@ HallEntry2:
         fcc     "08 PROUDLY    5000"
         fcb     0
 HallEntry3:
-        fcc     "06 PRESENT    4000"
+        fcc     "06 PRESENTS   4000"
         fcb     0
 HallEntry4:
         fcc     "04 BOMB       3000"
