@@ -248,9 +248,8 @@ RunGameFrameEnemiesDone:
         jsr     CheckEnemyCollision
 
 RunGameFrameCollisionDone:
-        ; Moving sprites are erased first. If an erase exposes arena content,
-        ; MarkStaticRedraw asks DrawStaticArenaIfDirty to restore platforms,
-        ; bombs, and popups before sprites are drawn at their new positions.
+        ; Moving sprites are erased first. Their erase paths restore the static
+        ; cells underneath, then FrameStaticDirty asks moving overlays to redraw.
         clr     FrameStaticDirty
         jsr     UpdateBombScorePopup
         jsr     EraseEnemy1AllIfChanged
@@ -289,7 +288,6 @@ RunGameFrameDying:
         jsr     ErasePlayerIfChanged
         lda     FrameStaticDirty
         beq     RunGameFrameDyingDrawPlayer
-        jsr     DrawStaticArena
         jsr     DrawEnemy1All
         jsr     DrawEnemy2
         jsr     DrawPower
@@ -311,7 +309,6 @@ RunGameFrameRespawnWait:
         jsr     ErasePlayerIfChanged
         lda     FrameStaticDirty
         beq     RunGameFrameRespawnWaitDrawPlayer
-        jsr     DrawStaticArena
         jsr     DrawEnemy1All
         jsr     DrawEnemy2
         jsr     DrawPower

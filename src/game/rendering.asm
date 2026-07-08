@@ -206,29 +206,7 @@ DrawTitleFrozenIcon:
         puls    a,b
 
 DrawTitle2x2Icon:
-        ; U points at the first 8x8 cell pattern. DrawCellPatternMasked advances
-        ; U by eight bytes, so the next call naturally draws the next quadrant.
-        sta     DrawObjectCol
-        stb     DrawObjectRow
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawScreenChrome:
         ; Chrome is the fixed frame: top/left/bottom border, sidebar fill, and
@@ -237,7 +215,23 @@ DrawScreenChrome:
         jsr     DrawLeftBorder
         jsr     DrawBottomBorder
         jsr     DrawSidebarBackground
-        jmp     DrawRightMargin
+        jsr     DrawRightMargin
+        jmp     DrawVersionLabel
+
+DrawVersionLabel:
+        lda     #COLOR_VERSION_LABEL
+        sta     DrawCellColor
+        lda     #VERSION_LABEL_COL
+        sta     DrawRunCol
+        lda     #VERSION_LABEL_ROW
+        sta     DrawRunRow
+        lda     #VERSION_LABEL_LEN
+        sta     DrawRunRemaining
+        jsr     DrawTextCells
+        ldu     #VersionLabelText
+        lda     #VERSION_LABEL_COL
+        ldb     #VERSION_LABEL_ROW
+        jmp     DrawString
 
 DrawTopBorder:
         ; Border routines are simple nested loops over text-cell coordinates.
@@ -885,18 +879,215 @@ DrawStaticArenaDone:
         rts
 
 MarkStaticRedraw:
-        ; One byte is enough to say "a sprite erase may have damaged static
-        ; background; redraw static arena before drawing moving objects."
+        ; The erased footprint has already restored its static cells. This flag
+        ; now means "redraw moving overlays that may have crossed those cells."
         lda     #1
         sta     FrameStaticDirty
         rts
 
 DrawStaticArenaIfDirty:
-        lda     FrameStaticDirty
-        beq     DrawStaticArenaIfDirtyDone
-        jmp     DrawStaticArena
+        rts
 
-DrawStaticArenaIfDirtyDone:
+RestoreStatic2x2AtAB:
+        sta     DrawObjectCol
+        stb     DrawObjectRow
+        lda     DrawObjectCol
+        ldb     DrawObjectRow
+        jsr     RestoreStaticCellAtAB
+
+        lda     DrawObjectCol
+        inca
+        ldb     DrawObjectRow
+        jsr     RestoreStaticCellAtAB
+
+        lda     DrawObjectCol
+        ldb     DrawObjectRow
+        incb
+        jsr     RestoreStaticCellAtAB
+
+        lda     DrawObjectCol
+        inca
+        ldb     DrawObjectRow
+        incb
+        jmp     RestoreStaticCellAtAB
+
+RestoreStaticCellAtAB:
+        sta     CheckObjectCol
+        stb     CheckObjectRow
+        cmpb    #ARENA_TOP_ROW
+        blo     RestoreStaticCellBorder
+        cmpb    #FLOOR_ROW
+        bhs     RestoreStaticCellBorder
+        cmpa    #ARENA_LEFT_COL
+        blo     RestoreStaticCellBorder
+        cmpa    #ARENA_RIGHT_COL
+        bhi     RestoreStaticCellBorder
+
+        jsr     RestoreStaticBaseCell
+        jsr     RestoreScorePopupCell
+        tsta
+        bne     RestoreStaticCellDone
+        jsr     RestoreBombCell
+
+RestoreStaticCellDone:
+        rts
+
+RestoreStaticCellBorder:
+        jmp     DrawBorderEmptyAtAB
+
+RestoreStaticBaseCell:
+        ldx     #CurrentPlatform1Row
+        lda     #PLATFORM_RUN_COUNT
+        sta     RestoreScanRemaining
+
+RestoreStaticBasePlatformLoop:
+        lda     CheckObjectRow
+        cmpa    ,x
+        bne     RestoreStaticBaseNext
+
+        lda     CheckObjectCol
+        cmpa    1,x
+        blo     RestoreStaticBaseNext
+        cmpa    3,x
+        bhi     RestoreStaticBaseNext
+
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        cmpa    1,x
+        beq     RestoreStaticBaseLeft
+        cmpa    3,x
+        beq     RestoreStaticBaseRight
+        jsr     DrawPlatformAtAB
+        rts
+
+RestoreStaticBaseLeft:
+        jsr     DrawPlatformLeftAtAB
+        rts
+
+RestoreStaticBaseRight:
+        jsr     DrawPlatformRightAtAB
+        rts
+
+RestoreStaticBaseNext:
+        leax    PLATFORM_RECORD_SIZE,x
+        dec     RestoreScanRemaining
+        bne     RestoreStaticBasePlatformLoop
+
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        jsr     DrawEmptyAtAB
+        rts
+
+RestoreScorePopupCell:
+        lda     #BOMB_COUNT
+        sta     RestoreScanRemaining
+        ldx     #BombScorePopupTimers
+        ldy     CurrentBombPositions
+
+RestoreScorePopupCellLoop:
+        lda     ,x
+        beq     RestoreScorePopupCellNext
+        jsr     IsRestoreCellInBombAtY
+        beq     RestoreScorePopupCellNext
+
+        lda     #COLOR_BOMB_LIT
+        sta     DrawCellColor
+        ldu     #CellScore200TopLeft
+        jsr     SelectRestoreBombCellPattern
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        jsr     DrawCellPattern
+        lda     #1
+        rts
+
+RestoreScorePopupCellNext:
+        leax    1,x
+        leay    2,y
+        dec     RestoreScanRemaining
+        bne     RestoreScorePopupCellLoop
+
+        clra
+        rts
+
+RestoreBombCell:
+        lda     #1
+        sta     RestoreScanIndex
+        lda     #BOMB_COUNT
+        sta     RestoreScanRemaining
+        ldx     #BombActiveFlags
+        ldy     CurrentBombPositions
+
+RestoreBombCellLoop:
+        lda     ,x
+        beq     RestoreBombCellNext
+        jsr     IsRestoreCellInBombAtY
+        beq     RestoreBombCellNext
+
+        lda     RestoreScanIndex
+        cmpa    BombLitIndex
+        bne     RestoreBombCellNormal
+        lda     #COLOR_BOMB_LIT
+        sta     DrawCellColor
+        ldu     #CellLitBombTopLeft
+        bra     RestoreBombCellDraw
+
+RestoreBombCellNormal:
+        lda     #COLOR_BOMB
+        sta     DrawCellColor
+        ldu     #CellBombTopLeft
+
+RestoreBombCellDraw:
+        jsr     SelectRestoreBombCellPattern
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        jsr     DrawCellPatternMasked
+        rts
+
+RestoreBombCellNext:
+        leax    1,x
+        leay    2,y
+        inc     RestoreScanIndex
+        dec     RestoreScanRemaining
+        bne     RestoreBombCellLoop
+        rts
+
+IsRestoreCellInBombAtY:
+        lda     CheckObjectCol
+        cmpa    ,y
+        blo     IsRestoreCellInBombNo
+        lda     ,y
+        inca
+        cmpa    CheckObjectCol
+        blo     IsRestoreCellInBombNo
+
+        lda     CheckObjectRow
+        cmpa    1,y
+        blo     IsRestoreCellInBombNo
+        lda     1,y
+        inca
+        cmpa    CheckObjectRow
+        blo     IsRestoreCellInBombNo
+
+        lda     #1
+        rts
+
+IsRestoreCellInBombNo:
+        clra
+        rts
+
+SelectRestoreBombCellPattern:
+        lda     CheckObjectRow
+        cmpa    1,y
+        beq     SelectRestoreBombCellColumn
+        leau    TEXT_CELL_HEIGHT*2,u
+
+SelectRestoreBombCellColumn:
+        lda     CheckObjectCol
+        cmpa    ,y
+        beq     SelectRestoreBombCellDone
+        leau    TEXT_CELL_HEIGHT,u
+
+SelectRestoreBombCellDone:
         rts
 
 DrawBombs:
@@ -939,6 +1130,28 @@ DrawBombsNext:
         inc     BombScanIndex
         dec     BombScanRemaining
         bne     DrawBombsLoop
+        rts
+
+DrawCurrentLitBomb:
+        lda     BombLitIndex
+        beq     DrawCurrentLitBombDone
+
+        ; BombLitIndex is 1-based; walk CurrentBombPositions to that 2-byte pair.
+        ldu     CurrentBombPositions
+        deca
+        beq     DrawCurrentLitBombFound
+
+DrawCurrentLitBombSeek:
+        leau    2,u
+        deca
+        bne     DrawCurrentLitBombSeek
+
+DrawCurrentLitBombFound:
+        lda     ,u
+        ldb     1,u
+        jmp     DrawLitBombAtAB
+
+DrawCurrentLitBombDone:
         rts
 
 DrawBombScorePopup:
@@ -1523,7 +1736,9 @@ ErasePlayerAtAB:
         jmp     RestorePlayerCellAtAB
 
 RestorePlayerCellAtAB:
-        ; Decide which kind of empty cell belongs under this coordinate.
+        ; Outside the arena the player erases back to border. Inside the arena,
+        ; restore the exact static cell underneath: background, platform, bomb,
+        ; or score popup.
         cmpb    #ARENA_TOP_ROW
         blo     RestorePlayerCellBorder
         cmpb    #FLOOR_ROW
@@ -1532,7 +1747,7 @@ RestorePlayerCellAtAB:
         blo     RestorePlayerCellBorder
         cmpa    #ARENA_RIGHT_COL
         bhi     RestorePlayerCellBorder
-        jmp     DrawEmptyAtAB
+        jmp     RestoreStaticCellAtAB
 
 RestorePlayerCellBorder:
         jmp     DrawBorderEmptyAtAB
@@ -1588,30 +1803,7 @@ DrawPlatformRightAtAB:
         jmp     DrawCellPattern
 
 EraseEnemyAtAB:
-        ; Enemies/items/bombs are always erased back to game-area background.
-        ; If a platform or bomb was underneath, FrameStaticDirty will trigger a
-        ; static redraw after the erase.
-        sta     DrawObjectCol
-        stb     DrawObjectRow
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawEmptyAtAB
+        jmp     RestoreStatic2x2AtAB
 
 DrawEnemyAtAB:
         ; Freeze overrides the enemy's normal sprite. When the blink says hidden,
@@ -1676,27 +1868,9 @@ DrawEnemyUsePhase3:
         ldu     #CellEnemy1Phase3
 
 DrawEnemyCells:
-        ; Most 2x2 sprites are stored as four consecutive 8-byte cell patterns:
-        ; top-left, top-right, bottom-left, bottom-right.
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawEnemy2AtAB:
         ; Enemy2 uses its own color and direction art but shares frozen rendering
@@ -1729,23 +1903,7 @@ DrawEnemy2UseLeft:
 DrawEnemy2Cells:
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawPowerAtAB:
         ; Power/bonus/energy share DrawPowerCells because their art is also four
@@ -1759,23 +1917,7 @@ DrawPowerAtAB:
 DrawPowerCells:
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawBonusItemAtAB:
         sta     DrawObjectCol
@@ -1794,8 +1936,6 @@ DrawEnergyItemAtAB:
         jmp     DrawPowerCells
 
 DrawBombAtAB:
-        ; Bomb quadrants are separate labels rather than one contiguous 32-byte
-        ; block, so each quadrant loads U explicitly.
         sta     DrawObjectCol
         stb     DrawObjectRow
         lda     #COLOR_BOMB
@@ -1803,26 +1943,7 @@ DrawBombAtAB:
         ldu     #CellBombTopLeft
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellBombTopRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellBombBottomLeft
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellBombBottomRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawLitBombAtAB:
         sta     DrawObjectCol
@@ -1832,30 +1953,9 @@ DrawLitBombAtAB:
         ldu     #CellLitBombTopLeft
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellLitBombTopRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellLitBombBottomLeft
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        ldu     #CellLitBombBottomRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked
 
 DrawBombScorePopupAtAB:
-        ; The score popup is drawn opaque with DrawCellPattern, replacing the
-        ; bomb cells for the duration of the timer.
         sta     DrawObjectCol
         stb     DrawObjectRow
         lda     #COLOR_BOMB_LIT
@@ -1863,51 +1963,10 @@ DrawBombScorePopupAtAB:
         ldu     #CellScore200TopLeft
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPattern
-
-        ldu     #CellScore200TopRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPattern
-
-        ldu     #CellScore200BottomLeft
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPattern
-
-        ldu     #CellScore200BottomRight
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPattern
+        jmp     DrawSprite2x2Opaque
 
 EraseBombAtAB:
-        ; Bomb erases also go to background; platform/bomb redraw is handled by
-        ; the static arena pass when needed.
-        sta     DrawObjectCol
-        stb     DrawObjectRow
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawEmptyAtAB
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawEmptyAtAB
+        jmp     RestoreStatic2x2AtAB
 
 DrawPlayerAtAB:
         ; PlayerSprite is a small numeric index. Doubling it selects the
@@ -1923,20 +1982,4 @@ DrawPlayerAtAB:
         ldu     d,x
         lda     DrawObjectCol
         ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        ldb     DrawObjectRow
-        incb
-        jsr     DrawCellPatternMasked
-
-        lda     DrawObjectCol
-        inca
-        ldb     DrawObjectRow
-        incb
-        jmp     DrawCellPatternMasked
+        jmp     DrawSprite2x2Masked

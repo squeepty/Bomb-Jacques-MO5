@@ -456,6 +456,10 @@ BombScanRemaining:
         fcb     0
 PlatformScanRemaining:
         fcb     0
+RestoreScanIndex:
+        fcb     0
+RestoreScanRemaining:
+        fcb     0
 BombScorePopupTimers:
         fcb     0,0,0,0,0,0
         fcb     0,0,0,0,0,0

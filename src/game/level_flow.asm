@@ -15,7 +15,7 @@
 ;   Points the bonus highlight at the first remaining active bomb.
 ;
 ; Modified:
-;   A, B, X
+;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 SelectNextLitBomb:
         ; BombLitIndex is 1-based so it can be compared directly with the
@@ -38,7 +38,7 @@ SelectNextLitBombLoop:
 SelectNextLitBombFound:
         lda     BombScanIndex
         sta     BombLitIndex
-        rts
+        jmp     DrawCurrentLitBomb
 
 ;------------------------------------------------------------------------------
 ; UpdateBombScorePopup

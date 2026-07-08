@@ -100,39 +100,71 @@ ClearColorLoop:
 ;   A, B, X, Y, U
 ;------------------------------------------------------------------------------
 DrawCellPattern:
-        ; CellAddress returns the same offset in X and Y. Because the MO5 planes
-        ; are banked, the address is the same; only the selected plane changes.
         jsr     CellAddress
+        bsr     SelectBitmapPlane
 
-        pshs    x,u
-        jsr     SelectBitmapPlane
-        puls    x,u
+        ; Move the destination to row 3 so seven of the eight row offsets fit in
+        ; the 6809's fast 8-bit indexed form.
+        leax    120,x
+        pulu    d
+        sta     -120,x
+        stb     -80,x
+        pulu    d
+        sta     -40,x
+        stb     ,x
+        pulu    d
+        sta     40,x
+        stb     80,x
+        pulu    d
+        sta     120,x
+        stb     160,x
 
-        pshs    x
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellBitmapRow:
-        ; One 8x8 cell consumes one byte per scanline. Add 40 bytes to move from
-        ; one pixel row to the next row in the same cell column.
-        lda     ,u+
-        sta     ,x
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellBitmapRow
-
-        puls    x
-        jsr     SelectColorPlane
-
+        ; SelectColorPlane would preserve unrelated $A7C0 bits too, but we have
+        ; just forced bitmap mode, so bit 0 can be toggled directly here.
+        dec     VIDEO_BANK_SELECT
         lda     DrawCellColor
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellColorRow:
+        sta     -120,x
+        sta     -80,x
+        sta     -40,x
         sta     ,x
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellColorRow
+        sta     40,x
+        sta     80,x
+        sta     120,x
+        sta     160,x
 
-        jsr     SelectBitmapPlane
+        inc     VIDEO_BANK_SELECT
+        rts
+
+DrawOpaqueCellBitmapAtX:
+        pshs    x
+        leax    120,x
+        pulu    d
+        sta     -120,x
+        stb     -80,x
+        pulu    d
+        sta     -40,x
+        stb     ,x
+        pulu    d
+        sta     40,x
+        stb     80,x
+        pulu    d
+        sta     120,x
+        stb     160,x
+        puls    x
+        rts
+
+DrawOpaqueCellColorAtX:
+        pshs    x
+        leax    120,x
+        sta     -120,x
+        sta     -80,x
+        sta     -40,x
+        sta     ,x
+        sta     40,x
+        sta     80,x
+        sta     120,x
+        sta     160,x
+        puls    x
         rts
 
 ;------------------------------------------------------------------------------
@@ -156,48 +188,152 @@ DrawCellColorRow:
 ;   A, B, X, U
 ;------------------------------------------------------------------------------
 DrawCellPatternMasked:
-        ; Masked draws are for moving objects. Zero source rows leave both
-        ; bitmap and color alone, so sprites can sit over the arena without
-        ; repainting their transparent rows.
         jsr     CellAddress
+        jsr     SelectBitmapPlane
 
         pshs    x,u
+        jsr     DrawMaskedCellBitmapAtX
+        puls    x,u
+        dec     VIDEO_BANK_SELECT
+        ldb     DrawCellColor
+        jsr     DrawMaskedCellColorAtX
+        inc     VIDEO_BANK_SELECT
+        rts
+
+DrawSprite2x2Masked:
+        jsr     CellAddress
         jsr     SelectBitmapPlane
+
+        pshs    x,u
+        jsr     DrawMaskedCellBitmapAtX
+        leax    1,x
+        jsr     DrawMaskedCellBitmapAtX
+        leax    319,x
+        jsr     DrawMaskedCellBitmapAtX
+        leax    1,x
+        jsr     DrawMaskedCellBitmapAtX
         puls    x,u
 
-        pshs    x,u
-        ldb     #TEXT_CELL_HEIGHT
+        dec     VIDEO_BANK_SELECT
+        ldb     DrawCellColor
+        jsr     DrawMaskedCellColorAtX
+        leax    1,x
+        jsr     DrawMaskedCellColorAtX
+        leax    319,x
+        jsr     DrawMaskedCellColorAtX
+        leax    1,x
+        jsr     DrawMaskedCellColorAtX
+        inc     VIDEO_BANK_SELECT
+        rts
 
-DrawCellMaskedBitmapRow:
+DrawSprite2x2Opaque:
+        jsr     CellAddress
+        jsr     SelectBitmapPlane
+
+        pshs    x,u
+        jsr     DrawOpaqueCellBitmapAtX
+        leax    1,x
+        jsr     DrawOpaqueCellBitmapAtX
+        leax    319,x
+        jsr     DrawOpaqueCellBitmapAtX
+        leax    1,x
+        jsr     DrawOpaqueCellBitmapAtX
+        puls    x,u
+
+        dec     VIDEO_BANK_SELECT
+        lda     DrawCellColor
+        jsr     DrawOpaqueCellColorAtX
+        leax    1,x
+        jsr     DrawOpaqueCellColorAtX
+        leax    319,x
+        jsr     DrawOpaqueCellColorAtX
+        leax    1,x
+        jsr     DrawOpaqueCellColorAtX
+        inc     VIDEO_BANK_SELECT
+        rts
+
+DrawMaskedCellBitmapAtX:
+        pshs    x
+        leax    120,x
         lda     ,u+
-        beq     DrawCellMaskedBitmapNext
-        ; OR merges foreground bits into the existing byte. Erase/redraw code
-        ; restores the background later when a sprite moves away.
+        beq     DrawMaskedCellBitmapRow1
+        ora     -120,x
+        sta     -120,x
+DrawMaskedCellBitmapRow1:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapRow2
+        ora     -80,x
+        sta     -80,x
+DrawMaskedCellBitmapRow2:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapRow3
+        ora     -40,x
+        sta     -40,x
+DrawMaskedCellBitmapRow3:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapRow4
         ora     ,x
         sta     ,x
-
-DrawCellMaskedBitmapNext:
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellMaskedBitmapRow
-
-        puls    x,u
-        jsr     SelectColorPlane
-
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellMaskedColorRow:
+DrawMaskedCellBitmapRow4:
         lda     ,u+
-        beq     DrawCellMaskedColorNext
-        lda     DrawCellColor
-        sta     ,x
+        beq     DrawMaskedCellBitmapRow5
+        ora     40,x
+        sta     40,x
+DrawMaskedCellBitmapRow5:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapRow6
+        ora     80,x
+        sta     80,x
+DrawMaskedCellBitmapRow6:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapRow7
+        ora     120,x
+        sta     120,x
+DrawMaskedCellBitmapRow7:
+        lda     ,u+
+        beq     DrawMaskedCellBitmapDone
+        ora     160,x
+        sta     160,x
+DrawMaskedCellBitmapDone:
+        puls    x
+        rts
 
-DrawCellMaskedColorNext:
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellMaskedColorRow
-
-        jsr     SelectBitmapPlane
+DrawMaskedCellColorAtX:
+        pshs    x
+        leax    120,x
+        lda     ,u+
+        beq     DrawMaskedCellColorRow1
+        stb     -120,x
+DrawMaskedCellColorRow1:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow2
+        stb     -80,x
+DrawMaskedCellColorRow2:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow3
+        stb     -40,x
+DrawMaskedCellColorRow3:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow4
+        stb     ,x
+DrawMaskedCellColorRow4:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow5
+        stb     40,x
+DrawMaskedCellColorRow5:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow6
+        stb     80,x
+DrawMaskedCellColorRow6:
+        lda     ,u+
+        beq     DrawMaskedCellColorRow7
+        stb     120,x
+DrawMaskedCellColorRow7:
+        lda     ,u+
+        beq     DrawMaskedCellColorDone
+        stb     160,x
+DrawMaskedCellColorDone:
+        puls    x
         rts
 
 ;------------------------------------------------------------------------------
@@ -304,46 +440,19 @@ DrawStringDown4Done:
 ;   A lookup table keeps this easy to read and avoids early arithmetic tricks.
 ;------------------------------------------------------------------------------
 CellAddress:
-        ; Save the column while B is transformed into a word-table offset.
-        ; Pushing A is smaller and clearer here than reserving a scratch byte.
-        pshs    a
+        ; The program runs from RAM, so the column byte is patched directly into
+        ; the ADDD immediate operand. This avoids a row-offset table lookup.
+        sta     CellAddressColumn
+        lda     #4*VIDEO_BYTES_PER_ROW
+        mul
         lslb
-        clra
-        ldx     #TextRowOffsets
-        ldd     d,x
-        addb    ,s+
-        adca    #0
+        rola
+CellAddressAddColumn:
         addd    #VIDEO_BITMAP_BASE
+CellAddressColumn equ *-1
         tfr     d,x
-        tfr     d,y
+        leay    ,x
         rts
-
-TextRowOffsets:
-        fdb     0
-        fdb     320
-        fdb     640
-        fdb     960
-        fdb     1280
-        fdb     1600
-        fdb     1920
-        fdb     2240
-        fdb     2560
-        fdb     2880
-        fdb     3200
-        fdb     3520
-        fdb     3840
-        fdb     4160
-        fdb     4480
-        fdb     4800
-        fdb     5120
-        fdb     5440
-        fdb     5760
-        fdb     6080
-        fdb     6400
-        fdb     6720
-        fdb     7040
-        fdb     7360
-        fdb     7680
 
 ;------------------------------------------------------------------------------
 ; DrawGlyphAtCell
@@ -363,13 +472,21 @@ TextRowOffsets:
 ;   A, B, X, Y, U
 ;
 ; Algorithm:
-;   1. Convert lowercase letters to uppercase.
+;   1. Convert most lowercase letters to uppercase.
 ;   2. Select the matching temporary glyph.
 ;   3. Copy 8 glyph bytes, one per bitmap row.
 ;------------------------------------------------------------------------------
 DrawGlyphAtCell:
-        ; The glyph table stores uppercase shapes only. Lowercase ASCII is
-        ; converted by subtracting 32 before the lookup chain.
+        ; The main glyph table stores uppercase shapes. The version stamp uses a
+        ; few lowercase forms; other lowercase ASCII falls back to uppercase.
+        cmpa    #'a'
+        lbeq    DrawGlyphUseLowerA
+        cmpa    #'m'
+        lbeq    DrawGlyphUseLowerM
+        cmpa    #'s'
+        lbeq    DrawGlyphUseLowerS
+        cmpa    #'v'
+        lbeq    DrawGlyphUseLowerV
         cmpa    #'a'
         blo     DrawGlyphFind
         cmpa    #'z'
@@ -389,6 +506,8 @@ DrawGlyphFind:
         lbeq    DrawGlyphUseHash
         cmpa    #','
         lbeq    DrawGlyphUseComma
+        cmpa    #'.'
+        lbeq    DrawGlyphUseDot
         cmpa    #'-'
         lbeq    DrawGlyphUseDash
         cmpa    #':'
@@ -478,6 +597,9 @@ DrawGlyphUseHash:
         lbra    DrawGlyphCopy
 DrawGlyphUseComma:
         ldu     #GlyphComma
+        lbra    DrawGlyphCopy
+DrawGlyphUseDot:
+        ldu     #GlyphDot
         lbra    DrawGlyphCopy
 DrawGlyphUseDash:
         ldu     #GlyphDash
@@ -592,6 +714,18 @@ DrawGlyphUseY:
         lbra    DrawGlyphCopy
 DrawGlyphUseZ:
         ldu     #GlyphZ
+        lbra    DrawGlyphCopy
+DrawGlyphUseLowerA:
+        ldu     #GlyphLowerA
+        lbra    DrawGlyphCopy
+DrawGlyphUseLowerM:
+        ldu     #GlyphLowerM
+        lbra    DrawGlyphCopy
+DrawGlyphUseLowerS:
+        ldu     #GlyphLowerS
+        lbra    DrawGlyphCopy
+DrawGlyphUseLowerV:
+        ldu     #GlyphLowerV
 
 DrawGlyphCopy:
         lda     GlyphShiftMode
@@ -695,6 +829,16 @@ GlyphComma:
         fcb     %00011000
         fcb     %00011000
         fcb     %00110000
+
+GlyphDot:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00011000
+        fcb     %00000000
 
 GlyphDash:
         fcb     %00000000
@@ -1074,6 +1218,46 @@ GlyphZ:
         fcb     %00110000
         fcb     %01100000
         fcb     %01111110
+        fcb     %00000000
+
+GlyphLowerA:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00111100
+        fcb     %00000110
+        fcb     %00111110
+        fcb     %01100110
+        fcb     %00111110
+        fcb     %00000000
+
+GlyphLowerM:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %01101100
+        fcb     %01111110
+        fcb     %01111110
+        fcb     %01101010
+        fcb     %01100010
+        fcb     %00000000
+
+GlyphLowerS:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %00111110
+        fcb     %01100000
+        fcb     %00111100
+        fcb     %00000110
+        fcb     %01111100
+        fcb     %00000000
+
+GlyphLowerV:
+        fcb     %00000000
+        fcb     %00000000
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %01100110
+        fcb     %00111100
+        fcb     %00011000
         fcb     %00000000
 
 DrawCellColor:

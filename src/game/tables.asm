@@ -115,6 +115,10 @@ HudText:
         fcc     "BOMB JACQUES BUILD 008"
         fcb     0
 
+VersionLabelText:
+        fcc     "v1.sam"
+        fcb     0
+
 Player1Text:
         fcc     "PLAYER1"
         fcb     0
