@@ -59,10 +59,10 @@ StartNewGame:
         sta     ScoreTensText
         sta     ScoreOnesText
 
-        ; Only the game area is cleared here. The sidebar/chrome were already
+        ; Only the game area is redrawn here. The sidebar/chrome were already
         ; drawn by the attract screens, so preserving them avoids a full-screen
         ; flash when play starts.
-        jsr     ClearGameArea
+        jsr     DrawArenaBackground
         jsr     DrawGameplayStatus
         jsr     DrawStaticArena
         jsr     DrawPlayer

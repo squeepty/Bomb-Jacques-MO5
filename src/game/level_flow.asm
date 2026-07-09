@@ -180,7 +180,7 @@ StartNextLevelGetReady:
         ; remain in place, reducing flicker during level changes.
         jsr     AdvanceCurrentLevel
         jsr     StartCurrentLevel
-        jsr     ClearGameArea
+        jsr     DrawArenaBackground
         jsr     DrawLevelLabel
         jsr     DrawStaticArena
         jsr     DrawPlayer

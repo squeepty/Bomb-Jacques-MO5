@@ -8,12 +8,12 @@
 ; and the K7 wrapper.
 ;==============================================================================
 
-; The program is assembled for PROGRAM_ORIGIN ($6000). The stack is initialized
+; The program is assembled for PROGRAM_ORIGIN. The stack is initialized
 ; to STACK_TOP ($9FFF), the top of the MO5 user RAM, in main.asm.
 ; That gives this build a simple layout:
 ;
 ;   $0000-$1F3F  MO5 video RAM window, bitmap or color selected by $A7C0
-;   $6000-...    game code and read-only data
+;   PROGRAM_ORIGIN-... game code and read-only data
 ;   after code    early writable variables owned by their modules
 ;   $9FFF down   stack
 ;

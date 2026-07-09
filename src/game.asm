@@ -18,7 +18,8 @@
 ;   scoring_hall.asm      score digits and hall-of-fame mutation
 ;   level_flow.asm        lit bomb, popups, level transitions
 ;   rendering.asm         dirty redraw and sprite/cell drawing
-;   tables/sprites/state  data, sprite bytes, and RAM variables
+;   tables/sprites/backgrounds/state
+;                         data, sprite/background bytes, and RAM variables
 ;==============================================================================
 
         include "game/flow.asm"
@@ -33,4 +34,5 @@
         include "game/rendering.asm"
         include "game/tables.asm"
         include "game/sprites.asm"
+        include "game/backgrounds.asm"
         include "game/state.asm"

@@ -16,7 +16,7 @@
 
 ; ORG does not write bytes. It tells the assembler "the next byte I emit will
 ; live at this address when the program is loaded." The build script and K7
-; wrapper both agree that the program is loaded at $6000.
+; wrapper both agree with PROGRAM_ORIGIN.
         org     PROGRAM_ORIGIN
 
 ;------------------------------------------------------------------------------
@@ -26,7 +26,7 @@
 ;   Program entry point for BUILD 008.
 ;
 ; Input:
-;   None. The program is expected to be loaded and executed at $6000.
+;   None. The program is expected to be loaded and executed at PROGRAM_ORIGIN.
 ;
 ; Output:
 ;   The MO5 screen shows a static arena, movable player, bombs, score,

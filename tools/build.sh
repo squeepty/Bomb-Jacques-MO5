@@ -57,8 +57,14 @@ rm -f "$DOWNLOAD_ZIP_OUT"
 )
 
 BIN_SIZE=$(wc -c < "$BIN_OUT" | tr -d ' ')
-LOAD_START_HEX=6000
-LOAD_END_DEC=$((0x6000 + BIN_SIZE - 1))
+LOAD_START_HEX=$(awk '
+    $1 == "PROGRAM_ORIGIN" && $2 == "equ" {
+        gsub(/^\$/, "", $3)
+        print $3
+        exit
+    }
+' "$SRC_DIR/constants.asm")
+LOAD_END_DEC=$((0x$LOAD_START_HEX + BIN_SIZE - 1))
 LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
 
 {

@@ -640,9 +640,19 @@ DrawGetReadyText:
         jmp     DrawStringShiftRight4
 
 EraseLevelMessage:
-        lda     #COLOR_BACKGROUND
-        sta     DrawCellColor
-        jmp     DrawWellDoneCells
+        lda     #WELL_DONE_TEXT_COL
+        sta     DrawRunCol
+        lda     #WELL_DONE_TEXT_LEN
+        sta     DrawRunRemaining
+
+EraseLevelMessageLoop:
+        lda     DrawRunCol
+        ldb     #LEVEL_MESSAGE_ROW
+        jsr     RestoreStaticCellAtAB
+        inc     DrawRunCol
+        dec     DrawRunRemaining
+        bne     EraseLevelMessageLoop
+        rts
 
 DrawWellDoneCells:
         lda     #WELL_DONE_TEXT_COL
@@ -702,6 +712,61 @@ ClearGameAreaCol:
         cmpa    #FLOOR_ROW
         blo     ClearGameAreaRow
         rts
+
+DrawArenaBackground:
+        ; The gameplay background is separate from ClearGameArea so title/hall
+        ; screens can still clear to plain cyan. The top of the source art is
+        ; empty cyan, so the full arena is cleared first and only the lower
+        ; bitmap rows are stored/copied.
+        jsr     SelectBitmapPlane
+        ldx     #VIDEO_BITMAP_BASE+ARENA_BACKGROUND_BASE_OFFSET
+        ldy     #ARENA_BACKGROUND_PIXEL_ROWS
+
+DrawArenaBackgroundClearBitmapRow:
+        ldb     #ARENA_BACKGROUND_COLS
+
+DrawArenaBackgroundClearBitmapByte:
+        clr     ,x+
+        decb
+        bne     DrawArenaBackgroundClearBitmapByte
+        leax    VIDEO_BYTES_PER_ROW-ARENA_BACKGROUND_COLS,x
+        leay    -1,y
+        bne     DrawArenaBackgroundClearBitmapRow
+
+        jsr     SelectColorPlane
+        ldx     #VIDEO_COLOR_BASE+ARENA_BACKGROUND_BASE_OFFSET
+        ldy     #ARENA_BACKGROUND_PIXEL_ROWS
+
+DrawArenaBackgroundColorRow:
+        ldb     #ARENA_BACKGROUND_COLS
+        lda     #COLOR_BACKGROUND
+
+DrawArenaBackgroundColorByte:
+        sta     ,x+
+        decb
+        bne     DrawArenaBackgroundColorByte
+        leax    VIDEO_BYTES_PER_ROW-ARENA_BACKGROUND_COLS,x
+        leay    -1,y
+        bne     DrawArenaBackgroundColorRow
+
+        jsr     SelectBitmapPlane
+        ldx     #VIDEO_BITMAP_BASE+ARENA_BACKGROUND_DATA_BASE_OFFSET
+        ldu     #EgyptBackgroundBitmap
+        ldy     #ARENA_BACKGROUND_DATA_PIXEL_ROWS
+
+DrawArenaBackgroundBitmapRow:
+        ldb     #ARENA_BACKGROUND_COLS
+
+DrawArenaBackgroundBitmapByte:
+        lda     ,u+
+        sta     ,x+
+        decb
+        bne     DrawArenaBackgroundBitmapByte
+        leax    VIDEO_BYTES_PER_ROW-ARENA_BACKGROUND_COLS,x
+        leay    -1,y
+        bne     DrawArenaBackgroundBitmapRow
+
+        jmp     SelectBitmapPlane
 
 DrawHallOfFameScreen:
         ; Hall rows are just colored text bands plus fixed strings. The mutable
@@ -975,8 +1040,7 @@ RestoreStaticBaseNext:
 
         lda     CheckObjectCol
         ldb     CheckObjectRow
-        jsr     DrawEmptyAtAB
-        rts
+        jmp     DrawArenaBackgroundCellAtAB
 
 RestoreScorePopupCell:
         lda     #BOMB_COUNT
@@ -1761,6 +1825,59 @@ DrawEmptyAtAB:
         ldu     #CellEmpty
         puls    a,b
         jmp     DrawCellPattern
+
+DrawArenaBackgroundCellAtAB:
+        sta     CheckObjectCol
+        stb     CheckObjectRow
+        lda     CheckObjectRow
+        suba    #ARENA_TOP_ROW
+        cmpa    #ARENA_BACKGROUND_DATA_TOP_CELL_ROW
+        bhs     DrawArenaBackgroundCellFromData
+
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        jmp     DrawEmptyAtAB
+
+DrawArenaBackgroundCellFromData:
+        lda     CheckObjectCol
+        ldb     CheckObjectRow
+        jsr     CellAddress
+
+        lda     CheckObjectRow
+        suba    #ARENA_TOP_ROW+ARENA_BACKGROUND_DATA_TOP_CELL_ROW
+        tfr     a,b
+        lda     #TEXT_CELL_HEIGHT*ARENA_BACKGROUND_COLS
+        mul
+        addb    CheckObjectCol
+        adca    #0
+        subd    #ARENA_LEFT_COL
+        addd    #EgyptBackgroundBitmap
+        tfr     d,u
+
+        jsr     SelectBitmapPlane
+        pshs    x
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawArenaBackgroundCellBitmapRow:
+        lda     ,u
+        sta     ,x
+        leau    ARENA_BACKGROUND_COLS,u
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawArenaBackgroundCellBitmapRow
+
+        puls    x
+        jsr     SelectColorPlane
+        lda     #COLOR_BACKGROUND
+        ldb     #TEXT_CELL_HEIGHT
+
+DrawArenaBackgroundCellColorRow:
+        sta     ,x
+        leax    VIDEO_BYTES_PER_ROW,x
+        decb
+        bne     DrawArenaBackgroundCellColorRow
+
+        jmp     SelectBitmapPlane
 
 DrawBorderEmptyAtAB:
         pshs    a,b
