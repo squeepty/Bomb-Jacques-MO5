@@ -2,7 +2,8 @@
 
 This document explains how Bomb Jacques stores and draws sprite art. It is a
 learning companion for the `Cell...` labels in `src/game/sprites.asm`, the glyph
-labels in `src/video.asm`, and the sidebar bitmap in `src/sidebar_art.asm`.
+labels in `src/video.asm`, the sidebar bitmap in `src/sidebar_art.asm`, and the
+gameplay background in `src/game/backgrounds.asm`.
 
 ## The Basic 8x8 Cell
 
@@ -70,8 +71,11 @@ There are two important cell draw routines:
 
 | Routine | Behavior |
 | --- | --- |
-| `DrawCellPattern` | Copies all 8 bitmap rows and writes all 8 color rows. Best for background, platforms, text backing cells, and erasing. |
+| `DrawCellPattern` | Copies all 8 bitmap rows and writes all 8 color rows. Best for platforms, text backing cells, and simple filled cells. |
 | `DrawCellPatternMasked` | ORs non-zero sprite bits into the bitmap and writes color only on rows that contain sprite pixels. Best for moving sprites. |
+| `DrawSprite2x2Masked` | Draws four contiguous 8x8 sprite cells after one cell-address calculation. Best for moving 2x2 sprites. |
+| `DrawSprite2x2Opaque` | Draws four contiguous 8x8 cells opaquely. Used for the 2x2 score popup. |
+| `DrawArenaBackgroundCellAtAB` | Restores one arena cell from the v2 gameplay background image. |
 
 `DrawCellPatternMasked` treats zero bits as transparent because it uses `ORA`
 with the destination byte:
@@ -85,7 +89,8 @@ with the destination byte:
 
 This means a sprite can be layered over the arena without first destroying all
 background pixels in that byte. When an object moves, the old 2x2 footprint is
-erased back to empty cells and the static arena is redrawn if needed.
+restored cell by cell: platform, popup, bomb, border, or the v2 gameplay
+background image.
 
 ## 2x2 Sprite Layout
 
@@ -295,6 +300,26 @@ Total bitmap data size:
 `DrawSidebarArt` copies those bytes directly into the bitmap plane, then writes
 `COLOR_SIDEBAR_ART` to the same footprint in the color plane.
 
+## Gameplay Background Bitmap
+
+`src/game/backgrounds.asm` stores the v2 Egypt gameplay background. The full
+source image is 240x176 pixels, matching the active arena exactly:
+
+```text
+30 bytes per row * 176 rows = 5280 bytes
+```
+
+The top of the image is empty cyan, so only a cell-aligned lower slice is stored:
+
+```text
+source rows 56-175
+30 bytes per row * 120 rows = 3600 bytes
+```
+
+`DrawArenaBackground` clears the whole arena to cyan, then copies the stored
+lower rows. `DrawArenaBackgroundCellAtAB` restores one 8x8 cell when a moving
+sprite erases over the image.
+
 ## Editing Sprites Safely
 
 When editing by hand:
@@ -312,3 +337,6 @@ The browser sprite editor can edit both:
 
 - gameplay 2x2 sprites in `src/game/sprites.asm`
 - the right-panel bitmap in `src/sidebar_art.asm`
+
+The gameplay background is generated from the PNG source and is not currently
+edited by the browser sprite editor.

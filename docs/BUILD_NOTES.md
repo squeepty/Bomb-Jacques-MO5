@@ -42,7 +42,7 @@ The build writes all generated files into `build/`.
 
 | File | Purpose |
 | --- | --- |
-| `build/bomb-jacques.bin` | Raw bytes assembled for address `$6000`; useful for DCMOTO debugger loading. |
+| `build/bomb-jacques.bin` | Raw bytes assembled for address `$4000`; useful for DCMOTO debugger loading. |
 | `build/bomb-jacques.raw` | Copy of the raw binary, kept as an explicit raw artifact. |
 | `build/bomb-jacques.loadm` | DECB/`LOADM` binary produced by LWTOOLS. |
 | `build/bomb-jacques.k7` | DCMOTO cassette image generated from the `LOADM` binary. |
@@ -50,8 +50,8 @@ The build writes all generated files into `build/`.
 | `build/bomb-jacques.lst` | Assembler listing with addresses and source lines. |
 | `build/bomb-jacques.map` | Symbol map. Useful for finding routine and data addresses. |
 
-`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The
-feature-complete build loads at `$6000` and currently ends at `$9B09`.
+`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The v2
+candidate loads at `$4000` and currently ends at `$8B74`.
 
 ## Cassette Loading In DCMOTO
 
@@ -76,13 +76,13 @@ Use this path when you want the fastest edit/build/test loop:
 2. Set the binary load range shown in `build/DCMOTO_LOAD.txt`.
 3. Press `F6`, or use `File > Charger fichier binaire...`.
 4. Choose `build/bomb-jacques.bin`.
-5. Set `PC` to `$6000`.
+5. Set `PC` to `$4000`.
 6. Run.
 
-For the current feature-complete build, the binary loader range is:
+For the current v2 candidate, the binary loader range is:
 
 ```text
-$6000-$9B09
+$4000-$8B74
 ```
 
 ## Source Layout During Assembly
@@ -98,7 +98,7 @@ Important includes:
 | `src/video.asm` | MO5 bitmap/color-plane selection, cell drawing, font drawing, and screen clearing. |
 | `src/input.asm` | Keyboard and joystick input scanning. |
 | `src/game.asm` | Gameplay include manifest that preserves assembler order. |
-| `src/game/*.asm` | Split gameplay modules for flow, setup, items, enemies, movement, collision/death, scoring/name entry, level flow, rendering, tables, sprites, and mutable state. |
+| `src/game/*.asm` | Split gameplay modules for flow, setup, items, enemies, movement, collision/death, scoring/name entry, level flow, rendering, tables, sprites, backgrounds, and mutable state. |
 | `src/levels.asm` | Platform and bomb tables for the ten levels. |
 | `src/sidebar_art.asm` | Right-panel bitmap art. |
 
@@ -136,7 +136,7 @@ rg "RunGameFrame:" build/bomb-jacques.lst
 | --- | --- | --- |
 | `error: lwasm not found` | LWTOOLS is not installed or not on `PATH`. | Install LWTOOLS and open a new shell. |
 | `node: command not found` | Node.js is missing. | Install Node.js; it is only needed for the `.k7` generator. |
-| DCMOTO loads but starts at the wrong place | The program counter was not set to the origin. | Set `PC` to `$6000`, or use cassette `LOADM"",,R`. |
+| DCMOTO loads but starts at the wrong place | The program counter was not set to the origin. | Set `PC` to the exec address in `build/DCMOTO_LOAD.txt`, or use cassette `LOADM"",,R`. |
 | DCMOTO binary load truncates or overruns | The debugger load range is stale. | Rebuild and copy the range from `build/DCMOTO_LOAD.txt`. |
 | The game shows old behavior | DCMOTO is still using an old artifact. | Re-run `tools/build.sh` and reload `build/bomb-jacques.bin` or `.k7`. |
 

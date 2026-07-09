@@ -19,15 +19,17 @@ reading both the assembly and the docs side by side.
 The current game milestone is:
 
 ```text
-BOMB JACQUES BUILD 008
-milestone-game-feature-complete
+BOMB JACQUES v2 candidate
+milestone-v2-candidate-background-image-support-docs
 ```
 
-BUILD 008 is feature-complete for the current gameplay target. It includes:
+The v2 candidate builds on the feature-complete BUILD 008 gameplay target. It
+includes:
 
 - title screen and hall-of-fame attract flow
 - high-score name entry
 - ten handcrafted levels
+- cropped Egypt background image support for the gameplay arena
 - level-clear and get-ready transitions
 - score, lives, death, respawn, and game-over flow
 - bonus, power, and energy item progression
@@ -36,6 +38,7 @@ BUILD 008 is feature-complete for the current gameplay target. It includes:
 - editable right-panel bitmap art
 - browser sprite editor for gameplay sprites and sidebar art
 - cassette image output for DCMOTO
+- bottom-left `v2` build label
 
 Sound effects are still deferred. Final DCMOTO play-through verification and
 small visual polish remain appropriate before treating the build as a release
@@ -211,10 +214,10 @@ Current file details:
 | Field | Value |
 | --- | --- |
 | Format | Thomson MO5 / DCMOTO K7 cassette image |
-| Size | 16440 bytes |
-| Build | `BOMB JACQUES BUILD 008` |
-| Load address | `$6000` |
-| SHA-256 | `767114b73b45c30f6c466a595cbfef49acb850e4d4c5ae27b607bef02aed0cf8` |
+| Size | 21000 bytes |
+| Build | `BOMB JACQUES v2 candidate` |
+| Load address | `$4000` |
+| SHA-256 | `83fa8dae3be4f8a2c12bc42464a7aed8891205cf099d12f16726c75b4d95ea39` |
 
 This file is copied from `build/bomb-jacques.k7` after running
 `tools/build.sh`. The `build/` directory remains ignored because it contains
@@ -227,7 +230,7 @@ The build writes generated files to `build/`, which is ignored by git.
 
 | File | Purpose |
 | --- | --- |
-| `build/bomb-jacques.bin` | Raw binary assembled for address `$6000`; fastest for debugger loading. |
+| `build/bomb-jacques.bin` | Raw binary assembled for address `$4000`; fastest for debugger loading. |
 | `build/bomb-jacques.raw` | Explicit copy of the raw binary. |
 | `build/bomb-jacques.loadm` | DECB/`LOADM` stream produced by LWTOOLS. |
 | `build/bomb-jacques.k7` | DCMOTO cassette image wrapping the `LOADM` stream. |
@@ -235,13 +238,13 @@ The build writes generated files to `build/`, which is ignored by git.
 | `build/bomb-jacques.lst` | Assembler listing with addresses and source lines. |
 | `build/bomb-jacques.map` | Symbol map for routines, tables, and variables. |
 
-For the current feature-complete build, the program loads at `$6000` and the
-generated binary currently ends at `$9B09`:
+For the current v2 candidate, the program loads at `$4000` and the generated
+binary currently ends at `$8B74`:
 
 ```text
-Start address: $6000
-End address:   $9B09
-Exec address:  $6000
+Start address: $4000
+End address:   $8B74
+Exec address:  $4000
 ```
 
 If the source grows, rebuild and trust `build/DCMOTO_LOAD.txt` over hardcoded
@@ -272,13 +275,13 @@ Use this path for a faster edit/build/test loop:
 2. Set the binary load range from `build/DCMOTO_LOAD.txt`.
 3. Press `F6`, or use `File > Charger fichier binaire...`.
 4. Choose `build/bomb-jacques.bin`.
-5. Set `PC` to `$6000`.
+5. Set `PC` to `$4000`.
 6. Run.
 
 For the current build, the debugger range is:
 
 ```text
-$6000-$9B09
+$4000-$8B74
 ```
 
 ## Source Layout
@@ -305,6 +308,7 @@ stack, and includes the rest of the assembly files.
 | `src/game/rendering.asm` | Title, HUD, sidebar, arena, enemies, items, bombs, player, text, and erase/redraw helpers. |
 | `src/game/tables.asm` | Wait loop, spawn tables, text strings, hall entries, color tables, and included level/sidebar data. |
 | `src/game/sprites.asm` | 8x8 cell art, 2x2 gameplay sprites, player sprite table, item art, and enemy art. |
+| `src/game/backgrounds.asm` | Cropped 240x176 gameplay background bitmap data. |
 | `src/game/state.asm` | Mutable gameplay variables allocated with `FCB`/`FDB`. |
 | `src/levels.asm` | Platform and bomb data for the ten handcrafted levels. |
 | `src/sidebar_art.asm` | 56x128 right-panel bitmap art. |
@@ -323,8 +327,8 @@ Key addresses:
 
 | Address or range | Meaning |
 | --- | --- |
-| `$6000` | Program origin and execution address. |
-| `$6000-$9B09` | Current assembled game binary range. |
+| `$4000` | Program origin and execution address. |
+| `$4000-$8B74` | Current assembled game binary range. |
 | `$9FFF` | Stack starts here and grows downward. |
 | `$0000-$1F3F` | MO5 banked video RAM window. |
 | `$A7C0` | Video bank select and system PIA area. |
@@ -409,6 +413,7 @@ The documentation is part of the project, not an afterthought.
 | [`docs/CPU_NOTES.md`](docs/CPU_NOTES.md) | 6809 mnemonic and addressing-mode explanations using project examples. |
 | [`docs/MEMORY_MAP.md`](docs/MEMORY_MAP.md) | Program origin, stack, video RAM window, hardware I/O, writable state, and load artifacts. |
 | [`docs/VIDEO_NOTES.md`](docs/VIDEO_NOTES.md) | MO5 display model, bitmap/color planes, cell addressing, drawing routines, text rendering, and redraw strategy. |
+| [`docs/SPRITE_OPTIMIZATION.md`](docs/SPRITE_OPTIMIZATION.md) | Deep dive into the sprite-rendering optimization pass that removed flicker and reduced redraw cost. |
 | [`docs/INPUT_NOTES.md`](docs/INPUT_NOTES.md) | Keyboard scanning, joystick PIA setup, held vs pressed state, gameplay controls, name-entry controls, and cheat input. |
 | [`docs/SPRITE_FORMAT.md`](docs/SPRITE_FORMAT.md) | 8x8 cell encoding, 2x2 sprite layout, masked drawing, player/enemy/item sprites, font glyphs, and sidebar bitmap format. |
 | [`docs/K7_FORMAT.md`](docs/K7_FORMAT.md) | Thomson K7 cassette block format, `LOADM` nesting, checksums, parser notes, and current artifact math. |
@@ -427,15 +432,16 @@ If you are using this repository to learn MO5 assembly development:
 7. Read `docs/INPUT_NOTES.md`, then inspect `ReadInput` in `src/input.asm`.
 8. Read `docs/SPRITE_FORMAT.md`, then edit a small sprite with the browser
    editor.
-9. Read `docs/MEMORY_MAP.md` and compare it with `build/DCMOTO_LOAD.txt`.
-10. Read `docs/K7_FORMAT.md` to understand why the cassette image is larger
+9. Read `docs/SPRITE_OPTIMIZATION.md` to understand the anti-flicker renderer.
+10. Read `docs/MEMORY_MAP.md` and compare it with `build/DCMOTO_LOAD.txt`.
+11. Read `docs/K7_FORMAT.md` to understand why the cassette image is larger
     than the raw assembled binary.
 
 The most useful mental model is that the game is a set of simple layers:
 
 ```text
 6809 code and data
-loaded at $6000
+loaded at $4000
 draws 8x8 cells into MO5 video planes
 uses normalized input state
 runs a small game-state machine

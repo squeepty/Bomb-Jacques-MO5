@@ -241,11 +241,31 @@ The screen is divided by constants:
 | Sidebar | Starts at `SIDEBAR_START_COL`. |
 | Right margin | `SIDEBAR_RIGHT_MARGIN_COL`. |
 | Sidebar art | `SIDEBAR_ART_COL`, `SIDEBAR_ART_ROW`, 56x128 pixels. |
+| Gameplay background | 240x176 pixels, drawn by `DrawArenaBackground`. |
 
 `DrawScreenChrome` draws border, sidebar background, and right margin. It is
 used for attract screens and initial setup. During play transitions, the game
-now prefers `ClearGameArea` plus narrow status redraws to avoid flickering the
-out-of-game area.
+now prefers `DrawArenaBackground` plus narrow status redraws to avoid flickering
+the out-of-game area.
+
+## Gameplay Background
+
+The v2 candidate adds a 240x176 two-color Egypt background behind the gameplay
+arena. The source image exactly matches the active game area: 30 bytes per
+pixel row by 176 rows.
+
+The upper part of the image is empty cyan. To save program space, the generated
+`src/game/backgrounds.asm` stores only the lower cell-aligned slice:
+
+```text
+source rows 56-175
+30 bytes per row * 120 rows = 3600 bytes
+```
+
+`DrawArenaBackground` clears the whole arena bitmap footprint to zero, fills the
+same color-plane footprint with `COLOR_BACKGROUND`, then streams the stored
+lower bitmap rows into video RAM. This keeps title and hall screens plain while
+gameplay levels get the pyramid/sphinx art.
 
 ## Gameplay Rendering Strategy
 
@@ -254,6 +274,7 @@ The renderer separates static and moving content.
 Static content:
 
 - borders and sidebar chrome
+- gameplay background
 - platforms
 - active bombs
 - title/hall-of-fame/name-entry backing cells
@@ -272,42 +293,47 @@ Normal play frame shape:
 1. Save current render positions.
 2. Update gameplay state.
 3. Erase old moving-object footprints if anything changed.
-4. Mark static redraw when erasing may have damaged background.
-5. Redraw static arena if dirty.
+4. Each erase restores the exact static cell underneath: background image,
+   platform, bomb, popup, or border.
+5. Mark dynamic overlays dirty when an erase may have crossed another moving
+   object.
 6. Draw changed moving objects.
 7. Draw score popup if active.
 
-`FrameStaticDirty` is the one-byte flag that tells the frame whether static
-arena cells need to be restored.
+`FrameStaticDirty` is now a one-byte "moving overlays may need redraw" flag. It
+no longer triggers a full static-arena repaint during ordinary frames.
 
 ## Erasing And Restoring
 
-Moving sprites are 2x2 cells. Erasing a sprite usually draws four empty cells at
-its previous footprint.
+Moving sprites are 2x2 cells. Erasing a sprite restores four cells at its
+previous footprint.
 
 For enemies and items:
 
 ```asm
 EraseEnemyAtAB:
-        jsr     DrawEmptyAtAB
-        ...
+        jmp     RestoreStatic2x2AtAB
 ```
 
-For the player, erase is slightly smarter:
+For a single arena cell, the restore path first checks bounds, then restores the
+right static layer:
 
 ```asm
-RestorePlayerCellAtAB:
+RestoreStaticCellAtAB:
         cmpb    #ARENA_TOP_ROW
-        blo     RestorePlayerCellBorder
+        blo     RestoreStaticCellBorder
         ...
-        jmp     DrawEmptyAtAB
+        jsr     RestoreStaticBaseCell
+        jsr     RestoreScorePopupCell
+        jsr     RestoreBombCell
 ```
+
+If no platform, popup, or bomb owns the cell, `RestoreStaticBaseCell` calls
+`DrawArenaBackgroundCellAtAB`. That routine either draws a plain cyan cell for
+the empty top area or copies the matching 8x8 slice from `EgyptBackgroundBitmap`.
 
 If Jacques exits into the border during the death animation, the erased cell is
 restored as border color rather than arena background.
-
-After an erase, static content such as platforms and bombs may need to be
-redrawn. That is why erase routines call `MarkStaticRedraw`.
 
 ## Sidebar Art
 
@@ -374,6 +400,7 @@ COLOR_LIFE          equ     $30
 COLOR_LEVEL         equ     $70
 COLOR_BORDER        equ     $00
 COLOR_SIDEBAR       equ     $70
+COLOR_VERSION_LABEL equ     $20
 ```
 
 Changing a color constant changes later draws using that color, not the bitmap

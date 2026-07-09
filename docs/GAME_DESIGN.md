@@ -183,12 +183,23 @@ The browser sprite editor supports:
 
 The editor is a production aid, not an in-game feature.
 
+## Visual Background
+
+The v2 candidate uses a 240x176 two-color Egypt background behind the active
+arena. The image is gameplay-only: title, hall-of-fame, and name-entry screens
+still clear the central area to plain cyan.
+
+Moving sprites restore the background image cell by cell when they erase, so
+the pyramid/sphinx art is part of the static arena layer alongside platforms,
+bombs, and score popups.
+
 ## Style
 
 The game should feel like a plausible 1985 Thomson MO5 release:
 
 - bright, readable colors
 - simple animated shapes
+- static illustrated arena backdrop
 - clear one-screen layouts
 - restrained CPU use
 - no arcade-machine mimicry for its own sake

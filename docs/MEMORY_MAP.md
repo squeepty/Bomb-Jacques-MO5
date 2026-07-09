@@ -6,10 +6,10 @@ learning companion for `src/constants.asm`, `src/memory.asm`, and the generated
 
 ## Big Picture
 
-The game is assembled to run at `$6000`:
+The game is assembled to run at `$4000`:
 
 ```asm
-PROGRAM_ORIGIN      equ     $6000
+PROGRAM_ORIGIN      equ     $4000
 STACK_TOP           equ     $9FFF
 ```
 
@@ -22,31 +22,32 @@ At startup, `main.asm` does:
 ```
 
 `ORG` tells the assembler that the first byte of the program will live at
-`$6000`. `LDS` moves the hardware stack pointer near the top of available user
-RAM.
+`PROGRAM_ORIGIN`. `LDS` moves the hardware stack pointer near the top of
+available user RAM.
 
 ## Current Address Summary
 
 | Address range | Size | Purpose |
 | --- | ---: | --- |
 | `$0000-$1F3F` | 8000 bytes | Banked MO5 video RAM window. The selected bank is either bitmap bytes or color bytes. |
-| `$6000` | 1 byte address | Program origin and execution address. |
-| `$6000-$9B09` | 15114 bytes | Current assembled game binary range. |
-| `$9B0A-$9FFF` | 1270 bytes | Current gap above the binary, used as stack headroom. |
+| `$4000` | 1 byte address | Program origin and execution address. |
+| `$4000-$8B74` | 19317 bytes | Current assembled game binary range. |
+| `$8B75-$9FFF` | 5259 bytes | Current gap above the binary, used as stack headroom. |
 | `$9FFF` downward | variable | Runtime stack. |
 | `$A7C0-$A7C3` | hardware | System PIA area used for video-plane selection and keyboard matrix access. |
 | `$A7CC-$A7CF` | hardware | Standard MO5 game-extension joystick PIA when present. |
 
-The current end address comes from `tools/build.sh`, which computes:
+The current end address comes from `tools/build.sh`, which reads
+`PROGRAM_ORIGIN` from `src/constants.asm` and computes:
 
 ```text
-end = $6000 + size(build/bomb-jacques.bin) - 1
+end = PROGRAM_ORIGIN + size(build/bomb-jacques.bin) - 1
 ```
 
-For the current feature-complete build:
+For the current v2 candidate:
 
 ```text
-$6000 + 15114 - 1 = $9B09
+$4000 + 19317 - 1 = $8B74
 ```
 
 ## Video RAM Window
@@ -131,7 +132,8 @@ one assembly stream, the final binary contains:
 2. read-only tables
 3. strings
 4. sprite data
-5. writable state bytes
+5. background bitmap data
+6. writable state bytes
 
 There is not yet a separate linker script or fixed RAM block for all variables.
 The labels near the end of `src/input.asm` and `src/game/state.asm` allocate
@@ -155,6 +157,22 @@ Current writable variables include:
 These labels are ordinary RAM addresses after the program has loaded. They are
 initialized by the bytes in the binary, then mutated by gameplay.
 
+## Resident Background Data
+
+The v2 candidate adds `src/game/backgrounds.asm`, a cropped bitmap copy of the
+240x176 Egypt gameplay background. The full arena is 30 bytes wide by 176 pixel
+rows, but the source image has empty cyan space at the top. To keep the resident
+data smaller, only source rows 56-175 are stored:
+
+```text
+30 bytes per row * 120 stored rows = 3600 bytes
+```
+
+`DrawArenaBackground` clears the whole playable arena to cyan, then streams
+those stored lower rows into the bitmap plane. Individual sprite erases call
+`DrawArenaBackgroundCellAtAB` through `RestoreStaticCellAtAB`, so moving
+objects restore the pyramid/sphinx art rather than a flat empty cell.
+
 ## Stack
 
 The stack starts at `$9FFF` and grows downward.
@@ -173,9 +191,9 @@ Example:
         puls    x,u
 ```
 
-The current binary ends at `$9B09`, leaving `$9B0A-$9FFF` as stack headroom.
-That is 1270 bytes. This is enough for the current shallow call patterns, but
-it is still a finite resource: every `JSR` and `PSHS` consumes stack space until
+The current binary ends at `$8B74`, leaving `$8B75-$9FFF` as stack headroom.
+That is 5259 bytes. This is enough for the current shallow call patterns, but it
+is still a finite resource: every `JSR` and `PSHS` consumes stack space until
 the matching `RTS` or `PULS`.
 
 ## Load Files And Addressing
@@ -184,8 +202,8 @@ the matching `RTS` or `PULS`.
 
 | File | Address behavior |
 | --- | --- |
-| `build/bomb-jacques.bin` | Raw bytes only. The emulator must be told to load them at `$6000`. |
-| `build/bomb-jacques.loadm` | DECB/`LOADM` file containing load address `$6000` and execution address `$6000`. |
+| `build/bomb-jacques.bin` | Raw bytes only. The emulator must be told to load them at `$4000`. |
+| `build/bomb-jacques.loadm` | DECB/`LOADM` file containing load address `$4000` and execution address `$4000`. |
 | `build/bomb-jacques.k7` | Cassette wrapper around the `LOADM` file. |
 | `build/DCMOTO_LOAD.txt` | Human-readable current load range. |
 
@@ -197,8 +215,8 @@ metadata inside the file.
 
 - If the binary grows too close to `$9FFF`, the stack can collide with code or
   variables.
-- If `PROGRAM_ORIGIN` changes, `tools/build.sh`, DCMOTO loading notes, and K7
-  examples must change with it.
+- If `PROGRAM_ORIGIN` changes, rebuild and verify DCMOTO loading notes and K7
+  examples. `tools/build.sh` reads the origin from `src/constants.asm`.
 - Any hardcoded address in docs should be checked against
   `build/DCMOTO_LOAD.txt` after a build.
 - Video writes must select the intended plane first; bitmap and color data share

@@ -1,5 +1,38 @@
 # Change Log
 
+## v2 Candidate
+
+Added:
+
+- Cropped 240x176 Egypt gameplay background image support.
+- `src/game/backgrounds.asm` generated from the two-color PNG background.
+- Background-aware static cell restoration, so sprite erases restore pyramid and
+  sphinx pixels instead of flat cyan.
+- Bottom-left `v2` version label.
+- Dedicated `docs/SPRITE_OPTIMIZATION.md` deep dive for the anti-flicker sprite
+  optimization pass.
+
+Changed:
+
+- Program origin moved from `$6000` to `$4000` to make room for resident
+  background bitmap data while keeping stack headroom.
+- `tools/build.sh` now derives the raw/debugger load origin from
+  `src/constants.asm`.
+- New-game and next-level setup draw `DrawArenaBackground` before platforms,
+  bombs, and actors.
+
+Observed:
+
+- `tools/build.sh` passes.
+- `git diff --check` passes.
+- Current raw binary range is `$4000-$8B74`.
+- Current downloadable K7 size is 21000 bytes.
+
+Status:
+
+- Tagged as `milestone-v2-candidate-background-image-support-docs`; DCMOTO
+  visual verification over the new background is still recommended.
+
 ## Post BUILD 008 Maintenance
 
 Changed:

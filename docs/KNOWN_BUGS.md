@@ -1,15 +1,11 @@
 # Known Bugs
 
-## BUILD 008 / Current
+## v2 Candidate / Current
 
 - No blocking gameplay bugs are currently known after
-  `milestone-game-rom-initial-version` and the later conservative `src/game/`
-  split verification.
-- No regression issue was found after splitting the former `src/game.asm`
-  monolith; the rebuilt K7 remains byte-identical to the tracked downloadable
-  cassette image.
+  `milestone-v2-candidate-background-image-support-docs`.
 - Final DCMOTO play-through verification is still recommended across all ten
-  levels.
+  levels, especially sprite restores over the Egypt background image.
 - Timing still uses the temporary busy-wait loop and
   `PLAY_TICKS_PER_SECOND = 17`, not a 50 Hz interrupt.
 - Sound effects are not implemented.
