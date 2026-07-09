@@ -196,6 +196,7 @@ TryJumpStoreTarget:
         clr     PlayerGrounded
         clr     PlayerFallCounter
         clr     PlayerLandingPose
+        jsr     SoundJump
 
 TryJumpDone:
         rts

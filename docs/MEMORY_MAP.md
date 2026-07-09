@@ -31,8 +31,8 @@ available user RAM.
 | --- | ---: | --- |
 | `$0000-$1F3F` | 8000 bytes | Banked MO5 video RAM window. The selected bank is either bitmap bytes or color bytes. |
 | `$4000` | 1 byte address | Program origin and execution address. |
-| `$4000-$8B74` | 19317 bytes | Current assembled game binary range. |
-| `$8B75-$9FFF` | 5259 bytes | Current gap above the binary, used as stack headroom. |
+| `$4000-$8CF3` | 19700 bytes | Current assembled game binary range. |
+| `$8CF4-$9FFF` | 4876 bytes | Current gap above the binary, used as stack headroom. |
 | `$9FFF` downward | variable | Runtime stack. |
 | `$A7C0-$A7C3` | hardware | System PIA area used for video-plane selection and keyboard matrix access. |
 | `$A7CC-$A7CF` | hardware | Standard MO5 game-extension joystick PIA when present. |
@@ -44,10 +44,10 @@ The current end address comes from `tools/build.sh`, which reads
 end = PROGRAM_ORIGIN + size(build/bomb-jacques.bin) - 1
 ```
 
-For the current v2 candidate:
+For the current final v2 candidate:
 
 ```text
-$4000 + 19317 - 1 = $8B74
+$4000 + 19700 - 1 = $8CF3
 ```
 
 ## Video RAM Window
@@ -94,6 +94,7 @@ to hardware rather than normal RAM.
 | --- | ---: | --- |
 | `VIDEO_BANK_SELECT` | `$A7C0` | `SelectBitmapPlane`, `SelectColorPlane`. |
 | `KEYBOARD_PORT` | `$A7C1` | Keyboard matrix scan in `src/input.asm`. |
+| `SOUND_BUZZER_PORT` | `$A7C1` | Bit-0 writes for the MO5 1-bit buzzer in `src/sound.asm`. |
 | `JOYPAD_DPAD_PORT` | `$A7CC` | Joystick direction reads. |
 | `JOYPAD_FIRE_PORT` | `$A7CD` | Joystick trigger reads. |
 | `JOYPAD_CRA` | `$A7CE` | Joystick PIA control register A. |
@@ -121,6 +122,7 @@ source files:
         ...
         include "video.asm"
         include "input.asm"
+        include "sound.asm"
         include "game.asm"
 ```
 
@@ -146,6 +148,7 @@ Current writable variables include:
 | Area | Examples | Purpose |
 | --- | --- | --- |
 | Input state | `Dpad_Read`, `Dpad_Held`, `Fire_Press`, `NameKey_Press` | Per-frame input values. |
+| Sound scratch | `SoundToneDelayCount`, `SoundToneCycleCount` | Temporary counters for blocking buzzer phrases. |
 | Player state | `PlayerCol`, `PlayerRow`, `PlayerDY`, `PlayerSprite` | Position, movement, and rendered pose. |
 | Enemy state | `Enemy1Col`, `Enemy1State`, `Enemy2Active`, slot variables | Enemy positions, phases, and movement counters. |
 | Item state | `PowerActive`, `BonusItemActive`, `EnergyItemSpawnTimer` | Bonus/power/energy item lifecycle. |
@@ -191,8 +194,8 @@ Example:
         puls    x,u
 ```
 
-The current binary ends at `$8B74`, leaving `$8B75-$9FFF` as stack headroom.
-That is 5259 bytes. This is enough for the current shallow call patterns, but it
+The current binary ends at `$8CF3`, leaving `$8CF4-$9FFF` as stack headroom.
+That is 4876 bytes. This is enough for the current shallow call patterns, but it
 is still a finite resource: every `JSR` and `PSHS` consumes stack space until
 the matching `RTS` or `PULS`.
 

@@ -141,6 +141,7 @@ EnterLevelClear:
         lda     #LEVEL_MESSAGE_COLOR_FRAMES
         sta     LevelMessageColorCounter
         jsr     DrawWellDoneText
+        jsr     SoundLevelClear
 
 EnterLevelClearDone:
         rts
@@ -196,7 +197,8 @@ EnterGetReadyState:
         clr     LevelMessageColorIndex
         lda     #LEVEL_MESSAGE_COLOR_FRAMES
         sta     LevelMessageColorCounter
-        jmp     DrawGetReadyText
+        jsr     DrawGetReadyText
+        rts
 
 AdvanceCurrentLevel:
         ; Levels wrap after LEVEL_COUNT, keeping the game running indefinitely.

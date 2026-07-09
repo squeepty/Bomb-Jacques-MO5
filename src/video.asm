@@ -504,6 +504,10 @@ DrawGlyphFind:
         lbeq    DrawGlyphUseQuote
         cmpa    #'#'
         lbeq    DrawGlyphUseHash
+        cmpa    #'('
+        lbeq    DrawGlyphUseParenLeft
+        cmpa    #')'
+        lbeq    DrawGlyphUseParenRight
         cmpa    #','
         lbeq    DrawGlyphUseComma
         cmpa    #'.'
@@ -594,6 +598,12 @@ DrawGlyphUseQuote:
         lbra    DrawGlyphCopy
 DrawGlyphUseHash:
         ldu     #GlyphHash
+        lbra    DrawGlyphCopy
+DrawGlyphUseParenLeft:
+        ldu     #GlyphParenLeft
+        lbra    DrawGlyphCopy
+DrawGlyphUseParenRight:
+        ldu     #GlyphParenRight
         lbra    DrawGlyphCopy
 DrawGlyphUseComma:
         ldu     #GlyphComma
@@ -818,6 +828,26 @@ GlyphHash:
         fcb     %01111110
         fcb     %00100100
         fcb     %00100100
+        fcb     %00000000
+
+GlyphParenLeft:
+        fcb     %00001100
+        fcb     %00011000
+        fcb     %00110000
+        fcb     %00110000
+        fcb     %00110000
+        fcb     %00011000
+        fcb     %00001100
+        fcb     %00000000
+
+GlyphParenRight:
+        fcb     %00110000
+        fcb     %00011000
+        fcb     %00001100
+        fcb     %00001100
+        fcb     %00001100
+        fcb     %00011000
+        fcb     %00110000
         fcb     %00000000
 
 GlyphComma:

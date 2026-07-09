@@ -116,7 +116,7 @@ HudText:
         fcb     0
 
 VersionLabelText:
-        fcc     "v2"
+        fcc     "(v2)"
         fcb     0
 
 Player1Text:

@@ -55,6 +55,7 @@ Start:
 
         ; Subsystems are initialized before the first frame. InitGame enters the
         ; title/attract state; it does not start active play immediately.
+        jsr     InitSound
         jsr     InitInput
         jsr     InitGame
 
@@ -70,6 +71,7 @@ MainLoop:
         ; memory exactly in this include order.
         include "video.asm"
         include "input.asm"
+        include "sound.asm"
         include "game.asm"
 
         end     Start

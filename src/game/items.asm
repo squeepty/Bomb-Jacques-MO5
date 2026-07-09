@@ -219,6 +219,7 @@ CheckPowerCollection:
         ldd     #ENERGY_ITEM_SPAWN_AFTER_POWER_FRAMES
         std     EnergyItemSpawnTimer
         jsr     ForcePlayerRedraw
+        jsr     SoundRewardChirp
 
 CheckPowerCollectionDone:
         rts
@@ -407,6 +408,7 @@ CheckBonusItemCollection:
         ldd     #POWER_SPAWN_AFTER_BONUS_FRAMES
         std     PowerSpawnTimer
         jsr     AddBonusItemScore
+        jsr     SoundLevelClear
         jsr     ForcePlayerRedraw
 
 CheckBonusItemCollectionDone:
@@ -603,6 +605,7 @@ CheckEnergyItemCollection:
         clr     EnergyItemSpawnTimer
         clr     EnergyItemSpawnTimer+1
         jsr     AddEnergyItemLife
+        jsr     SoundLevelClear
         jsr     ForcePlayerRedraw
 
 CheckEnergyItemCollectionDone:

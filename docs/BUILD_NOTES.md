@@ -50,8 +50,8 @@ The build writes all generated files into `build/`.
 | `build/bomb-jacques.lst` | Assembler listing with addresses and source lines. |
 | `build/bomb-jacques.map` | Symbol map. Useful for finding routine and data addresses. |
 
-`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The v2
-candidate loads at `$4000` and currently ends at `$8B74`.
+`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The current
+final v2 candidate loads at `$4000` and currently ends at `$8CF3`.
 
 ## Cassette Loading In DCMOTO
 
@@ -79,10 +79,10 @@ Use this path when you want the fastest edit/build/test loop:
 5. Set `PC` to `$4000`.
 6. Run.
 
-For the current v2 candidate, the binary loader range is:
+For the current final v2 candidate, the binary loader range is:
 
 ```text
-$4000-$8B74
+$4000-$8CF3
 ```
 
 ## Source Layout During Assembly
@@ -97,6 +97,7 @@ Important includes:
 | `src/memory.asm` | Memory-layout comments and project memory assumptions. |
 | `src/video.asm` | MO5 bitmap/color-plane selection, cell drawing, font drawing, and screen clearing. |
 | `src/input.asm` | Keyboard and joystick input scanning. |
+| `src/sound.asm` | One-bit MO5 buzzer initialization and short blocking gameplay effects. |
 | `src/game.asm` | Gameplay include manifest that preserves assembler order. |
 | `src/game/*.asm` | Split gameplay modules for flow, setup, items, enemies, movement, collision/death, scoring/name entry, level flow, rendering, tables, sprites, backgrounds, and mutable state. |
 | `src/levels.asm` | Platform and bomb tables for the ten levels. |

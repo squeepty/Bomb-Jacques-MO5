@@ -248,6 +248,10 @@ used for attract screens and initial setup. During play transitions, the game
 now prefers `DrawArenaBackground` plus narrow status redraws to avoid flickering
 the out-of-game area.
 
+`DrawVersionLabel` is intentionally not part of chrome anymore. It draws the
+small `(v2)` label in the lower-left play area only after title and hall-of-fame
+screen content has been cleared and redrawn.
+
 ## Gameplay Background
 
 The v2 candidate adds a 240x176 two-color Egypt background behind the gameplay
@@ -400,7 +404,7 @@ COLOR_LIFE          equ     $30
 COLOR_LEVEL         equ     $70
 COLOR_BORDER        equ     $00
 COLOR_SIDEBAR       equ     $70
-COLOR_VERSION_LABEL equ     $20
+COLOR_VERSION_LABEL equ     $06
 ```
 
 Changing a color constant changes later draws using that color, not the bitmap

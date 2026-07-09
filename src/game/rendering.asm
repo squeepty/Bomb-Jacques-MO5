@@ -67,7 +67,8 @@ DrawTitleScreen:
         ldu     #TitleStartText
         lda     #TITLE_START_COL
         ldb     #TITLE_START_ROW
-        jmp     DrawString
+        jsr     DrawString
+        jmp     DrawVersionLabel
 
 DrawTitleBombRow:
         lda     #TITLE_BOMB_TEXT_ROW
@@ -215,8 +216,7 @@ DrawScreenChrome:
         jsr     DrawLeftBorder
         jsr     DrawBottomBorder
         jsr     DrawSidebarBackground
-        jsr     DrawRightMargin
-        jmp     DrawVersionLabel
+        jmp     DrawRightMargin
 
 DrawVersionLabel:
         lda     #COLOR_VERSION_LABEL
@@ -844,7 +844,7 @@ DrawHallOfFameRows:
         sta     HallDrawRow
         dec     HallDrawRemaining
         bne     DrawHallOfFameRows
-        rts
+        jmp     DrawVersionLabel
 
 DrawNameEntryScreen:
         ; Name entry uses the same title/header style as the hall, then draws

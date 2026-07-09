@@ -92,7 +92,7 @@ These are not CPU instructions. They are commands to LWASM, the assembler.
 | Directive | Meaning in this project |
 | --- | --- |
 | `ORG` | Sets the address where assembled code will live. `main.asm` uses `org PROGRAM_ORIGIN`, currently `$4000`. |
-| `INCLUDE` | Inserts another source file at assembly time. `main.asm` includes constants, memory notes, video, input, and game code. |
+| `INCLUDE` | Inserts another source file at assembly time. `main.asm` includes constants, memory notes, video, input, sound, and game code. |
 | `END` | Marks the end of assembly and names the program entry point with `end Start`. |
 | `EQU` | Defines a constant. Labels such as `VIDEO_BYTES_PER_ROW equ 40` do not allocate memory. |
 | `FCB` | Form constant byte. Used for sprite bytes, state variables, color tables, and byte data. |

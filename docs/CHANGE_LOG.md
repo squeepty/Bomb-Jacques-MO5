@@ -1,5 +1,57 @@
 # Change Log
 
+## Final v2 Candidate
+
+Changed:
+
+- Current milestone name is now `BOMB JACQUES final v2 candidate`.
+- Git milestone tag is `milestone-final-v2-candidate`.
+- Build load notes now identify the generated artifact as the final v2
+  candidate.
+
+Observed:
+
+- `tools/build.sh` passes.
+- `git diff --check` passes.
+- Current raw binary range is `$4000-$8CF3`.
+- Current downloadable K7 size is 21404 bytes.
+
+## v2 Sound Pass
+
+Added:
+
+- `src/sound.asm` with short 1-bit MO5 buzzer phrases.
+- Sound hooks for normal bomb pickup, lit bomb pickup, jump start, active enemy
+  hit/player death, frozen-enemy collection, level clear, power pickup, and
+  game over.
+- `docs/SOUND_NOTES.md` documenting the buzzer port, effect shapes, hooks, and
+  timing caveats.
+
+Changed:
+
+- `src/main.asm` initializes sound at startup and includes the new sound module.
+- Downloadable K7 artifact rebuilt after adding sound.
+- Audio feedback pass keeps the normal bomb pickup blip, gives lit bomb a short
+  brighter blip near E#7/F7, extends jump into a bright long high tick, shares the
+  longer rising chirp across bonus, power, energy/life, and level-clear rewards,
+  and keeps the enemy/death rasp.
+- Level startup stays silent while the `GET READY` banner is visible.
+- Game over now plays a long falling decrescendo after the final death
+  animation.
+- Version label now draws inside the lower-left play area only on title and
+  hall-of-fame screens, with black text on cyan paper.
+
+Observed:
+
+- `tools/build.sh` passes.
+- Current raw binary range is `$4000-$8CF3`.
+- Current downloadable K7 size is 21404 bytes.
+
+Status:
+
+- Audio should be checked in DCMOTO or on hardware for volume, clickiness, and
+  whether any blocking phrase feels too long during play.
+
 ## v2 Candidate
 
 Added:
@@ -8,7 +60,7 @@ Added:
 - `src/game/backgrounds.asm` generated from the two-color PNG background.
 - Background-aware static cell restoration, so sprite erases restore pyramid and
   sphinx pixels instead of flat cyan.
-- Bottom-left `v2` version label.
+- Initial `(v2)` version label.
 - Dedicated `docs/SPRITE_OPTIMIZATION.md` deep dive for the anti-flicker sprite
   optimization pass.
 
@@ -25,8 +77,8 @@ Observed:
 
 - `tools/build.sh` passes.
 - `git diff --check` passes.
-- Current raw binary range is `$4000-$8B74`.
-- Current downloadable K7 size is 21000 bytes.
+- Current raw binary range before sound was `$4000-$8B74`.
+- Downloadable K7 size before sound was 21000 bytes.
 
 Status:
 

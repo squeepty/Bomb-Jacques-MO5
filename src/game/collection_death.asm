@@ -49,6 +49,7 @@ CheckBombCollectionLoop:
         lda     ,u
         ldb     1,u
         jsr     StartBombScorePopup
+        jsr     SoundLitBomb
         bra     CheckBombCollectionNoPopup
 
 CheckBombCollectionEraseNormal:
@@ -56,6 +57,7 @@ CheckBombCollectionEraseNormal:
         lda     ,u
         ldb     1,u
         jsr     EraseBombAtAB
+        jsr     SoundBombPickup
 
 CheckBombCollectionNoPopup:
         jsr     ForcePlayerRedraw
@@ -143,6 +145,7 @@ ForcePlayerRedraw:
 
 AwardFrozenEnemyScore:
         jsr     AddScore100
+        jsr     SoundEnemyHit
         jsr     ForcePlayerRedraw
         rts
 
@@ -356,6 +359,7 @@ HandleEnemyHit:
 
         lda     #GAME_STATE_DYING
         sta     GameState
+        jsr     SoundEnemyHit
         clr     DeathAnimStepPhase
         clr     DeathSpritePhase
         clr     PlayerGraceTimer
@@ -566,6 +570,7 @@ EnterGameOver:
         jsr     DrawPower
         jsr     DrawBonusItem
         jsr     DrawEnergyItem
+        jsr     SoundGameOver
 
         jsr     BuildPlayerHallEntryFields
         jsr     IsHallOfFameScore

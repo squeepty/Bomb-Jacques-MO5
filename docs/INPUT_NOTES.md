@@ -26,7 +26,7 @@ The relevant addresses are defined in `src/constants.asm`.
 
 | Symbol | Address | Purpose |
 | --- | ---: | --- |
-| `KEYBOARD_PORT` | `$A7C1` | System PIA keyboard matrix port. |
+| `KEYBOARD_PORT` | `$A7C1` | System PIA keyboard matrix port; bit 0 also feeds the 1-bit buzzer. |
 | `JOYPAD_DPAD_PORT` | `$A7CC` | Standard game-extension direction port. |
 | `JOYPAD_FIRE_PORT` | `$A7CD` | Standard game-extension trigger port. |
 | `JOYPAD_CRA` | `$A7CE` | Game-extension PIA control register A. |
@@ -34,6 +34,10 @@ The relevant addresses are defined in `src/constants.asm`.
 
 The joystick ports are optional hardware. The keyboard fallback is always
 available on the MO5.
+
+`src/sound.asm` also writes `$A7C1`, but only as a short blocking effect between
+input scans. Each effect finishes by clearing the port, and the next keyboard
+scan writes a fresh selector byte before reading a key.
 
 ## Normalized Button Bits
 
@@ -380,6 +384,9 @@ The table order matters: the scanner stops on the first pressed key it finds.
   in `NameKeyboardTable` wins.
 - Timing is tied to the current frame loop rather than a fixed interrupt, so
   input sampling rate follows frame timing.
+- Sound effects briefly write the same PIA port used for keyboard selectors,
+  so future interrupt-driven audio should coordinate explicitly with input
+  scanning instead of assuming blocking effects.
 
 ## References
 

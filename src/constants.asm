@@ -26,6 +26,8 @@ VIDEO_BITMAP_BASE   equ     $0000
 VIDEO_COLOR_BASE    equ     VIDEO_BITMAP_BASE
 VIDEO_BANK_SELECT   equ     $A7C0
 KEYBOARD_PORT       equ     $A7C1
+SOUND_BUZZER_PORT   equ     KEYBOARD_PORT
+SOUND_BUZZER_BIT    equ     $01
 JOYPAD_DPAD_PORT    equ     $A7CC
 JOYPAD_FIRE_PORT    equ     $A7CD
 JOYPAD_CRA          equ     $A7CE
@@ -75,7 +77,7 @@ COLOR_HALL_HEADER   equ     $16
 COLOR_BORDER        equ     $00
 COLOR_SIDEBAR       equ     $70
 COLOR_SIDEBAR_ART   equ     $20
-COLOR_VERSION_LABEL equ     $20
+COLOR_VERSION_LABEL equ     $06
 
 ;------------------------------------------------------------------------------
 ; Game-state machine values
@@ -122,9 +124,9 @@ LIFE_ICON1_COL      equ     LIFE_ICON2_COL-PLAYER_WIDTH
 SCORE_TEXT_COL      equ     SIDEBAR_TEXT_COL
 SCORE_TEXT_ROW      equ     SIDEBAR_SCORE_ROW
 SCORE_DIGIT_COL     equ     SIDEBAR_SCORE_COL
-VERSION_LABEL_COL   equ     0
-VERSION_LABEL_ROW   equ     TEXT_ROWS-1
-VERSION_LABEL_LEN   equ     2
+VERSION_LABEL_COL   equ     1
+VERSION_LABEL_ROW   equ     TEXT_ROWS-2
+VERSION_LABEL_LEN   equ     4
 SIDEBAR_ART_COL     equ     SIDEBAR_START_COL+1
 SIDEBAR_ART_ROW     equ     8
 SIDEBAR_ART_PIXEL_ROWS equ   128

@@ -121,6 +121,24 @@ Frozen-enemy collection has one special respawn rule:
 - Enemy 2 is reactivated immediately when the freeze period ends if it was
   collected while frozen.
 
+## Sound Cues
+
+The current sound pass uses the MO5 internal 1-bit buzzer for short blocking
+effects:
+
+| Event | Cue |
+| --- | --- |
+| Jump start | Bright long high tick. |
+| Normal bomb pickup | Short medium blip. |
+| Lit bomb pickup | Short brighter blip near E#7/F7. |
+| Bonus Ball pickup | Longer rising chirp. |
+| Power pickup | Longer rising chirp. |
+| Energy Ball pickup | Longer rising chirp. |
+| Level clear | Longer rising chirp. |
+| Game over | Long decrescendo. |
+| Active enemy hit / player death | Louder descending rasp. |
+| Frozen enemy collected | Louder descending rasp. |
+
 ## Level Progression
 
 The game has ten handcrafted levels. Each level defines:
