@@ -14,22 +14,22 @@ documentation over clever compression. The long-term idea is that someone can
 learn how an MO5 game is assembled, loaded, rendered, controlled, and evolved by
 reading both the assembly and the docs side by side.
 
-## Current Milestone
+## Current Release
 
-The current game milestone is:
+The current game release is:
 
 ```text
-BOMB JACQUES final v2 candidate
-milestone-final-v2-candidate
+BOMB JACQUES V2
 ```
 
-The final v2 candidate builds on the feature-complete BUILD 008 gameplay target.
-It includes:
+V2 builds on the feature-complete BUILD 008 gameplay target and the subsequent
+renderer, background, sound, and release-polish passes. It includes:
 
 - title screen and hall-of-fame attract flow
 - high-score name entry
 - ten handcrafted levels
-- cropped Egypt background image support for the gameplay arena
+- cropped Egypt background image support for gameplay and name entry
+- a graduated sphinx-shadow treatment that keeps black sprites readable
 - level-clear and get-ready transitions
 - score, lives, death, respawn, and game-over flow
 - bonus, power, and energy item progression
@@ -40,11 +40,11 @@ It includes:
 - editable right-panel bitmap art
 - browser sprite editor for gameplay sprites and sidebar art
 - cassette image output for DCMOTO
-- attract-only bottom-left `(v2)` build label inside the play area
+- attract-only bottom-left `(v2)` release label inside the play area
 
-Final DCMOTO play-through verification, including audio balance, and small
-visual polish remain appropriate before treating the build as a release
-candidate.
+The V2 release pass keeps the pyramid visible behind name entry, replaces the
+solid sphinx shadow with the approved graduated dither, removes the last unused
+BUILD 008 display string, and refreshes the downloadable cassette artifacts.
 
 ## Game Concept
 
@@ -211,20 +211,25 @@ Direct project link:
 
 [`downloads/bomb-jacques.k7`](downloads/bomb-jacques.k7)
 
+Packaged download:
+
+[`downloads/bomb-jacques.k7.zip`](downloads/bomb-jacques.k7.zip)
+
 Current file details:
 
 | Field | Value |
 | --- | --- |
 | Format | Thomson MO5 / DCMOTO K7 cassette image |
-| Size | 21404 bytes |
-| Build | `BOMB JACQUES final v2 candidate` |
+| Size | 21381 bytes |
+| Build | `BOMB JACQUES V2` |
 | Load address | `$4000` |
-| SHA-256 | `44aee638628ef7d5cf66994c7207a25f50a99e14a7ed8940f8594afabc92fd65` |
+| End address | `$8CDC` |
+| SHA-256 | `9fac6f699a76f0cafd605abe4413aa158698c87d2467630b6c54669d4dedffeb` |
 
 This file is copied from `build/bomb-jacques.k7` after running
 `tools/build.sh`. The `build/` directory remains ignored because it contains
-generated working artifacts; `downloads/bomb-jacques.k7` is the stable file to
-link from a project page or release note.
+generated working artifacts; the files under `downloads/` are the stable release
+artifacts to link from a project page or release note.
 
 ## Build Outputs
 
@@ -240,12 +245,11 @@ The build writes generated files to `build/`, which is ignored by git.
 | `build/bomb-jacques.lst` | Assembler listing with addresses and source lines. |
 | `build/bomb-jacques.map` | Symbol map for routines, tables, and variables. |
 
-For the current final v2 candidate, the program loads at `$4000` and the
-generated binary currently ends at `$8CF3`:
+For V2, the program loads at `$4000` and the generated binary ends at `$8CDC`:
 
 ```text
 Start address: $4000
-End address:   $8CF3
+End address:   $8CDC
 Exec address:  $4000
 ```
 
@@ -283,7 +287,7 @@ Use this path for a faster edit/build/test loop:
 For the current build, the debugger range is:
 
 ```text
-$4000-$8CF3
+$4000-$8CDC
 ```
 
 ## Source Layout
@@ -331,7 +335,7 @@ Key addresses:
 | Address or range | Meaning |
 | --- | --- |
 | `$4000` | Program origin and execution address. |
-| `$4000-$8CF3` | Current assembled game binary range. |
+| `$4000-$8CDC` | V2 assembled game binary range. |
 | `$9FFF` | Stack starts here and grows downward. |
 | `$0000-$1F3F` | MO5 banked video RAM window. |
 | `$A7C0` | Video bank select and system PIA area. |
@@ -411,7 +415,7 @@ The documentation is part of the project, not an afterthought.
 | --- | --- |
 | [`docs/GAME_DESIGN.md`](docs/GAME_DESIGN.md) | Current gameplay rules, scoring, enemies, items, timing, cheat, and sprite-editor role. |
 | [`docs/BUILD_NOTES.md`](docs/BUILD_NOTES.md) | Toolchain setup, build output, DCMOTO loading, common build problems, and build hygiene. |
-| [`docs/CHANGE_LOG.md`](docs/CHANGE_LOG.md) | Build-by-build history from BUILD 001 through BUILD 008. |
+| [`docs/CHANGE_LOG.md`](docs/CHANGE_LOG.md) | Release and build history from BUILD 001 through V2. |
 | [`docs/KNOWN_BUGS.md`](docs/KNOWN_BUGS.md) | Current known issues, verification notes, and historical milestone caveats. |
 | [`docs/CPU_NOTES.md`](docs/CPU_NOTES.md) | 6809 mnemonic and addressing-mode explanations using project examples. |
 | [`docs/MEMORY_MAP.md`](docs/MEMORY_MAP.md) | Program origin, stack, video RAM window, hardware I/O, writable state, and load artifacts. |
@@ -478,7 +482,7 @@ rg "VIDEO_BANK_SELECT" src docs
 rg "POWER_FREEZE_FRAMES" src docs
 ```
 
-Before creating a milestone or sharing a build:
+Before publishing a release or sharing a build:
 
 ```sh
 tools/build.sh
@@ -494,11 +498,9 @@ Known current limitations:
 
 - timing still uses a temporary game-loop scale rather than an MO5 50 Hz
   interrupt
-- sound effects are short blocking phrases and still need real DCMOTO/audio
-  balance verification
-- final all-level DCMOTO play-through verification is still recommended
-- visual polish may still happen around title, hall of fame, sprite editor, and
-  right-panel art
+- sound effects are short blocking phrases
+- an all-level DCMOTO or hardware play-through remains a useful platform check,
+  especially for timing and audio balance
 
 See [`docs/KNOWN_BUGS.md`](docs/KNOWN_BUGS.md) for the current issue and
 verification list.

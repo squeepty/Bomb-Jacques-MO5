@@ -50,8 +50,8 @@ The build writes all generated files into `build/`.
 | `build/bomb-jacques.lst` | Assembler listing with addresses and source lines. |
 | `build/bomb-jacques.map` | Symbol map. Useful for finding routine and data addresses. |
 
-`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The current
-final v2 candidate loads at `$4000` and currently ends at `$8CF3`.
+`build/DCMOTO_LOAD.txt` is the authoritative current address sheet. The V2
+release loads at `$4000` and ends at `$8CDC`.
 
 ## Cassette Loading In DCMOTO
 
@@ -79,10 +79,10 @@ Use this path when you want the fastest edit/build/test loop:
 5. Set `PC` to `$4000`.
 6. Run.
 
-For the current final v2 candidate, the binary loader range is:
+For the V2 release, the binary loader range is:
 
 ```text
-$4000-$8CF3
+$4000-$8CDC
 ```
 
 ## Source Layout During Assembly
@@ -146,7 +146,7 @@ rg "RunGameFrame:" build/bomb-jacques.lst
 Generated files under `build/` are ignored by git. Source, docs, and tooling are
 the files that should be committed.
 
-Before making a milestone or sharing a build:
+Before publishing a release or sharing a build:
 
 ```sh
 tools/build.sh

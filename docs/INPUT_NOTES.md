@@ -1,8 +1,8 @@
 # Input Notes
 
-This document explains how Bomb Jacques reads controls on the Thomson MO5 and
-turns raw hardware bits into game-friendly input state. It is written as a
-learning companion for `src/input.asm`.
+This document explains how the Bomb Jacques V2 release reads controls on the
+Thomson MO5 and turns raw hardware bits into game-friendly input state. It is
+written as a learning companion for `src/input.asm`.
 
 ## Input Goals
 

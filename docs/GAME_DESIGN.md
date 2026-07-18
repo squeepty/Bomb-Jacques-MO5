@@ -178,7 +178,7 @@ Enemy frame counters are staggered so fewer enemies step on the same frame.
 Timed items use their own 4-frame movement counters and enter play sequentially.
 This smooths perceived motion without changing the grid-based collision or
 drawing model. Half-cell interpolation is intentionally outside the current
-milestone.
+release design.
 
 ## Cheat
 
@@ -203,9 +203,13 @@ The editor is a production aid, not an in-game feature.
 
 ## Visual Background
 
-The v2 candidate uses a 240x176 two-color Egypt background behind the active
-arena. The image is gameplay-only: title, hall-of-fame, and name-entry screens
-still clear the central area to plain cyan.
+V2 uses a 240x176 two-color Egypt background behind the active arena. Gameplay
+and high-score name entry retain the pyramid/sphinx image; the title and
+hall-of-fame screens clear the central area to plain cyan for readability.
+
+The originally solid shadow beneath the sphinx head uses an approved graduated
+dither. Its silhouette remains shaded while cyan openings keep black moving
+sprites readable over that part of the image.
 
 Moving sprites restore the background image cell by cell when they erase, so
 the pyramid/sphinx art is part of the static arena layer alongside platforms,

@@ -66,7 +66,7 @@ UpdateEnemy1AllDone:
 ; Purpose:
 ;   Spawns one additional enemy 1 every 5 seconds until four enemy-1 slots are
 ;   active at once. Timing uses the temporary active-play tick scale until the
-;   build gains a 50 Hz IRQ.
+;   timing model is redesigned around a 50 Hz IRQ.
 ;
 ; Modified:
 ;   A, B, D, X

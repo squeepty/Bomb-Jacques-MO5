@@ -15,7 +15,7 @@ The project cassette has three nested layers:
 
 | Layer | File in this project | What it means |
 | --- | --- | --- |
-| Raw program bytes | `build/bomb-jacques.bin` | The assembled 6809 machine code and data that will live at `$4000-$8CF3`. |
+| Raw program bytes | `build/bomb-jacques.bin` | The assembled 6809 machine code and data that will live at `$4000-$8CDC`. |
 | `LOADM` stream | `build/bomb-jacques.loadm` | A Thomson/DECB machine-code file: record headers plus the raw program bytes. |
 | K7 cassette image | `build/bomb-jacques.k7` | Cassette blocks that carry the `LOADM` stream. |
 
@@ -28,9 +28,9 @@ For the current build:
 
 | Artifact | Size | Meaning |
 | --- | ---: | --- |
-| `build/bomb-jacques.bin` | 19700 bytes | Program image from `$4000` through `$8CF3`. |
-| `build/bomb-jacques.loadm` | 19710 bytes | 5-byte data-record header + 19700 program bytes + 5-byte end record. |
-| `build/bomb-jacques.k7` | 21404 bytes | Header block + 78 data blocks + end block. |
+| `build/bomb-jacques.bin` | 19677 bytes | V2 program image from `$4000` through `$8CDC`. |
+| `build/bomb-jacques.loadm` | 19687 bytes | 5-byte data-record header + 19677 program bytes + 5-byte end record. |
+| `build/bomb-jacques.k7` | 21381 bytes | Header block + 78 data blocks + end block. |
 
 ## File Structure
 
@@ -290,18 +290,18 @@ The first data block in this project begins with the first bytes of the inner
 `LOADM` stream:
 
 ```text
-00 4c f4 40 00 ...
+00 4c dd 40 00 ...
 ```
 
 Those five bytes are not K7 metadata. They are the `LOADM` data-record marker,
 data length, and load address. The K7 data block simply carries them.
 
 The final data block is shorter when the carried file size is not a multiple of
-254. In the current build, the final data block carries 152 bytes, so its stored
+254. In the V2 release, the final data block carries 129 bytes, so its stored
 length is:
 
 ```text
-152 + 2 = 154 = $9A
+129 + 2 = 131 = $83
 ```
 
 ## End Block
@@ -357,7 +357,7 @@ end record
 For the current build, the first and only data record begins:
 
 ```text
-00 4c f4 40 00 ...
+00 4c dd 40 00 ...
 ```
 
 Decoded:
@@ -365,14 +365,14 @@ Decoded:
 | Bytes | Meaning |
 | --- | --- |
 | `00` | Data record marker |
-| `4c f4` | `$4CF4` bytes, 19700 decimal |
+| `4c dd` | `$4CDD` bytes, 19677 decimal |
 | `40 00` | Load address `$4000` |
 
-The program bytes occupy `$4CF4` bytes. Because they load at `$4000`, the last
+The program bytes occupy `$4CDD` bytes. Because they load at `$4000`, the last
 loaded byte is:
 
 ```text
-$4000 + $4CF4 - 1 = $8CF3
+$4000 + $4CDD - 1 = $8CDC
 ```
 
 That value should match the memory-map documentation and the assembler listing.
@@ -408,7 +408,7 @@ The cassette layer simply streams the `LOADM` bytes in order.
 
 ## Current Project Example
 
-After running `tools/build.sh`, the current `build/bomb-jacques.k7` is 21404
+After running `tools/build.sh`, the V2 `build/bomb-jacques.k7` is 21381
 bytes and contains 80 blocks:
 
 | Block category | Count |
@@ -424,29 +424,29 @@ The first, last, and boundary blocks are:
 | K7 offsets | Type | Payload length | Stored length | Checksum |
 | --- | --- | ---: | ---: | ---: |
 | `$0000-$0022` | Header `$00` | 14 | `$10` | `$17` |
-| `$0023-$0135` | Data `$01` | 254 | `$00` | `$F0` |
+| `$0023-$0135` | Data `$01` | 254 | `$00` | `$07` |
 | `$0136-$0248` | Data `$01` | 254 | `$00` | `$52` |
 | `...` | 74 more full data blocks | 254 | `$00` | varies |
-| `$51C7-$52D9` | Data `$01` | 254 | `$00` | `$D8` |
-| `$52DA-$5386` | Data `$01` | 152 | `$9A` | `$E3` |
-| `$5387-$539B` | End `$FF` | 0 | `$02` | `$00` |
+| `$51C7-$52D9` | Data `$01` | 254 | `$00` | `$0B` |
+| `$52DA-$536F` | Data `$01` | 129 | `$83` | `$66` |
+| `$5370-$5384` | End `$FF` | 0 | `$02` | `$00` |
 
-The carried `LOADM` stream is 19710 bytes:
+The carried `LOADM` stream is 19687 bytes:
 
 ```text
 5-byte data-record header
-+ 19700-byte program image
++ 19677-byte program image
 + 5-byte end record
-= 19710 bytes
+= 19687 bytes
 ```
 
 The K7 data payload is split like this:
 
 ```text
-77 full 254-byte blocks + 1 partial 152-byte block
-= (77 * 254) + 152
-= 19558 + 152
-= 19710 bytes
+77 full 254-byte blocks + 1 partial 129-byte block
+= (77 * 254) + 129
+= 19558 + 129
+= 19687 bytes
 ```
 
 The total K7 size follows from the block sizes:
@@ -454,16 +454,16 @@ The total K7 size follows from the block sizes:
 ```text
 header: 21 + 14 = 35
 data:   77 * (21 + 254) = 21175
-data:   21 + 152 = 173
+data:   21 + 129 = 150
 end:    21 + 0 = 21
-total:  35 + 21175 + 173 + 21 = 21404 bytes
+total:  35 + 21175 + 150 + 21 = 21381 bytes
 ```
 
-The final byte offset is `$539B` because offsets are zero-based:
+The final byte offset is `$5384` because offsets are zero-based:
 
 ```text
-21404 decimal = $539C bytes
-last offset = $539C - 1 = $539B
+21381 decimal = $5385 bytes
+last offset = $5385 - 1 = $5384
 ```
 
 ## Writer Walkthrough
@@ -553,7 +553,7 @@ After this loop, `payload_file` should equal `build/bomb-jacques.loadm`.
 | --- | --- |
 | Full data blocks appear to have zero bytes | Stored length `$00` means 254 payload bytes because the length wraps. |
 | Checksums are consistently wrong | The checksum is being calculated over type/length/marker bytes instead of payload only. |
-| The first data block looks like metadata | It is the inner `LOADM` record header: `00 4c f4 40 00`. |
+| The first data block looks like metadata | It is the inner `LOADM` record header: `00 4c dd 40 00`. |
 | The cassette seems to end twice | There is a `LOADM` end record inside the data payload and a K7 end block outside it. |
 | A parser reads one byte too few or too many | Remember that block size is `21 + payload_length`. |
 | Offsets look one byte past the documented end | File sizes are counts; offsets are zero-based. |
@@ -564,19 +564,19 @@ These checks are quick ways to prove the three layers still agree:
 
 ```text
 raw binary size:
-    $4CF4 = 19700 bytes
+    $4CDD = 19677 bytes
 
 loaded address range:
-    $4000 through $8CF3
+    $4000 through $8CDC
 
 LOADM size:
-    5 + 19700 + 5 = 19710 bytes
+    5 + 19677 + 5 = 19687 bytes
 
 K7 data split:
-    77 * 254 + 152 = 19710 bytes
+    77 * 254 + 129 = 19687 bytes
 
 K7 total size:
-    35 + 21175 + 173 + 21 = 21404 bytes
+    35 + 21175 + 150 + 21 = 21381 bytes
 ```
 
 If a code change grows the assembled binary, update the numbers here only after

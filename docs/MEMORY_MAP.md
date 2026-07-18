@@ -31,8 +31,8 @@ available user RAM.
 | --- | ---: | --- |
 | `$0000-$1F3F` | 8000 bytes | Banked MO5 video RAM window. The selected bank is either bitmap bytes or color bytes. |
 | `$4000` | 1 byte address | Program origin and execution address. |
-| `$4000-$8CF3` | 19700 bytes | Current assembled game binary range. |
-| `$8CF4-$9FFF` | 4876 bytes | Current gap above the binary, used as stack headroom. |
+| `$4000-$8CDC` | 19677 bytes | V2 assembled game binary range. |
+| `$8CDD-$9FFF` | 4899 bytes | Current gap above the binary, used as stack headroom. |
 | `$9FFF` downward | variable | Runtime stack. |
 | `$A7C0-$A7C3` | hardware | System PIA area used for video-plane selection and keyboard matrix access. |
 | `$A7CC-$A7CF` | hardware | Standard MO5 game-extension joystick PIA when present. |
@@ -44,10 +44,10 @@ The current end address comes from `tools/build.sh`, which reads
 end = PROGRAM_ORIGIN + size(build/bomb-jacques.bin) - 1
 ```
 
-For the current final v2 candidate:
+For the V2 release:
 
 ```text
-$4000 + 19700 - 1 = $8CF3
+$4000 + 19677 - 1 = $8CDC
 ```
 
 ## Video RAM Window
@@ -162,10 +162,10 @@ initialized by the bytes in the binary, then mutated by gameplay.
 
 ## Resident Background Data
 
-The v2 candidate adds `src/game/backgrounds.asm`, a cropped bitmap copy of the
-240x176 Egypt gameplay background. The full arena is 30 bytes wide by 176 pixel
-rows, but the source image has empty cyan space at the top. To keep the resident
-data smaller, only source rows 56-175 are stored:
+V2 includes `src/game/backgrounds.asm`, a cropped bitmap copy of the 240x176
+Egypt background used by gameplay and name entry. The full arena is 30 bytes
+wide by 176 pixel rows, but the source image has empty cyan space at the top. To
+keep the resident data smaller, only source rows 56-175 are stored:
 
 ```text
 30 bytes per row * 120 stored rows = 3600 bytes
@@ -175,6 +175,9 @@ data smaller, only source rows 56-175 are stored:
 those stored lower rows into the bitmap plane. Individual sprite erases call
 `DrawArenaBackgroundCellAtAB` through `RestoreStaticCellAtAB`, so moving
 objects restore the pyramid/sphinx art rather than a flat empty cell.
+
+The final shadow treatment beneath the sphinx head is already encoded into
+these 3600 resident bytes. It changes no runtime layout or restore logic.
 
 ## Stack
 
@@ -194,8 +197,8 @@ Example:
         puls    x,u
 ```
 
-The current binary ends at `$8CF3`, leaving `$8CF4-$9FFF` as stack headroom.
-That is 4876 bytes. This is enough for the current shallow call patterns, but it
+The V2 binary ends at `$8CDC`, leaving `$8CDD-$9FFF` as stack headroom. That is
+4899 bytes. This is enough for the current shallow call patterns, but it
 is still a finite resource: every `JSR` and `PSHS` consumes stack space until
 the matching `RTS` or `PULS`.
 

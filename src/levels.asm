@@ -1,7 +1,7 @@
 ;==============================================================================
 ; levels.asm
 ;
-; Platform and bomb coordinate tables for the milestone 8 handcrafted level pass.
+; Platform and bomb coordinate tables for the ten V2 handcrafted levels.
 ; Each platform row stores row,start,length. Each bomb row stores column,row.
 ;
 ; These are pure data tables. Gameplay code indexes LevelPlatformTable and

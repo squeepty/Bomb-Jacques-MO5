@@ -19,7 +19,7 @@
 ; InitGame
 ;
 ; Purpose:
-;   Initializes the milestone 8 arena, player, bombs, score, highlighted bonus
+;   Initializes the V2 arena, player, bombs, score, highlighted bonus
 ;   bomb, enemies, lives, level state, and play state.
 ;
 ; Modified:

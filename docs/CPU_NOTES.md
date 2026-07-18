@@ -2,10 +2,10 @@
 
 The Thomson MO5 uses a Motorola 6809E running at roughly 1 MHz.
 
-This document is a learning map for the 6809 assembly actually used by Bomb
-Jacques. It is not a full 6809 manual. Instead, it explains every CPU mnemonic
-and assembler directive currently present in `src/*.asm`, with the project
-idioms that make those instructions useful.
+This document is a learning map for the 6809 assembly used by the Bomb Jacques
+V2 release. It is not a full 6809 manual. Instead, it explains every CPU
+mnemonic and assembler directive currently present in `src/*.asm`, with the
+project idioms that make those instructions useful.
 
 ## Registers
 
@@ -140,6 +140,7 @@ side effects.
 | `DEC` | Decrement a byte in memory. | Common loop and timer operation. |
 | `DECA` | Decrement `A`. | Used when a value is already in `A`. |
 | `DECB` | Decrement `B`. | Very common for countdown loops. |
+| `MUL` | Multiply unsigned `A` by unsigned `B` into `D`. | `CellAddress` uses it to begin the `row * 320` video-offset calculation. |
 
 Arithmetic instructions set flags. After addition or subtraction, unsigned code
 usually cares about `C` and equality code usually cares about `Z`.
@@ -167,6 +168,7 @@ into `A`. That makes it ideal for questions like "is this button bit set?"
 | `ASLA` | Arithmetic shift left `A` by one bit. | Multiplies an unsigned byte by two when the top bit is not important. |
 | `LSLB` | Logical shift left `B` by one bit. | Used to turn an index into a word-table offset. |
 | `LSRA` | Logical shift right `A` by one bit. | Used by pseudo-random seed updates. The old bit 0 moves into carry. |
+| `ROLA` | Rotate `A` left through carry. | Paired with `LSLB` to shift the full 16-bit `D` result left in `CellAddress`. |
 
 The shift instructions update carry with the bit that was shifted out. The seed
 generators use that carry with `BCC` to choose whether to apply feedback.
@@ -224,6 +226,7 @@ large routines outgrow short-branch range.
 | `BMI` | Branch if minus, short range. | Tests `N = 1`. Used for direction bytes such as `$FF` meaning left/up. |
 | `JMP` | Jump to an address with no return. | Tail-calls and state transitions. |
 | `JSR` | Jump to subroutine. | Calls another routine and pushes the return address on `S`. |
+| `BSR` | Branch to subroutine, short relative range. | Used for nearby hot-path helpers such as video-plane selection. |
 | `RTS` | Return from subroutine. | Pops the return address from `S`. |
 
 Unsigned compare cheat sheet:
@@ -243,6 +246,7 @@ Unsigned compare cheat sheet:
 | --- | --- | --- |
 | `PSHS` | Push registers onto the hardware stack `S`. | Used to preserve registers around nested drawing or table-walking calls. |
 | `PULS` | Pull registers from the hardware stack `S`. | Restores registers previously saved with `PSHS`. |
+| `PULU` | Pull bytes or registers through user stack `U`. | The unrolled cell renderer uses `pulu d` as a compact two-byte sprite-data fetch that advances `U`. |
 
 Keep stack operations balanced. If a routine does `pshs x,u`, it must later do
 the matching `puls x,u` on every path before `RTS`, unless it intentionally
@@ -282,21 +286,22 @@ registers.
 
 ## Common Project Idioms
 
-### Countdown Loop
+### Unrolled Cell Copy
 
 ```asm
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellBitmapRow:
-        lda     ,u+
-        sta     ,x
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellBitmapRow
+        leax    120,x
+        pulu    d
+        sta     -120,x
+        stb     -80,x
+        pulu    d
+        sta     -40,x
+        stb     ,x
 ```
 
-This says: repeat eight times, copying one byte per bitmap row, then move the
-destination pointer down one MO5 scanline.
+Here `U` is intentionally used like a read-only data stack. Each `PULU D` reads
+two consecutive sprite bytes and advances `U` by two. Fixed offsets from `X`
+replace the old eight-iteration loop; the remaining four rows follow the same
+pattern.
 
 ### Active-Low Keyboard Bits
 
@@ -334,4 +339,5 @@ erases the old sprite footprint, redraws the restored static cells, and draws
 the new sprite. This is why compare and branch instructions are everywhere in
 the gameplay modules under `src/game/`.
 
-Every routine documents its inputs, outputs, modified registers, and algorithm.
+Public and subsystem-level routines document their purpose, inputs, outputs,
+and modified registers where that contract helps callers.

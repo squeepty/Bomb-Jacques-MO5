@@ -1,7 +1,7 @@
 ;==============================================================================
 ; video.asm
 ;
-; BUILD 008 video routines for the Thomson MO5 bitmap display.
+; Bomb Jacques V2 video routines for the Thomson MO5 bitmap display.
 ;
 ; The MO5 display used here has two conceptual planes at the same address
 ; window: bitmap bits and color attributes. Most routines follow the pattern:
@@ -437,7 +437,9 @@ DrawStringDown4Done:
 ; Algorithm:
 ;   A text row is 8 bitmap rows. Each bitmap row is 40 bytes.
 ;   Therefore one text row is 8 * 40 = 320 bytes.
-;   A lookup table keeps this easy to read and avoids early arithmetic tricks.
+;   MUL computes row * 160, then a 16-bit left shift doubles it to row * 320.
+;   The column is patched into the ADDD immediate operand because the program
+;   runs from writable RAM.
 ;------------------------------------------------------------------------------
 CellAddress:
         ; The program runs from RAM, so the column byte is patched directly into
@@ -473,7 +475,7 @@ CellAddressColumn equ *-1
 ;
 ; Algorithm:
 ;   1. Convert most lowercase letters to uppercase.
-;   2. Select the matching temporary glyph.
+;   2. Select the matching glyph.
 ;   3. Copy 8 glyph bytes, one per bitmap row.
 ;------------------------------------------------------------------------------
 DrawGlyphAtCell:
@@ -787,7 +789,7 @@ DrawGlyphShiftRight4Row:
 
         rts
 
-; Temporary 8x8 glyph set.
+; Complete 8x8 glyph set used by the V2 interface.
 ; Each byte is one row. Bit 7 is the leftmost pixel.
 
 GlyphSpace:

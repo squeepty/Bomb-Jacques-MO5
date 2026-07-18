@@ -1,7 +1,7 @@
 ;==============================================================================
 ; input.asm
 ;
-; BUILD 008 input routines.
+; Bomb Jacques V2 input routines.
 ;
 ; The rest of the game reads normalized input bytes instead of raw hardware
 ; ports. That keeps keyboard fallback and optional joystick hardware hidden

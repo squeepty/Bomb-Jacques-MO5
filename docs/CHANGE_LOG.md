@@ -1,5 +1,39 @@
 # Change Log
 
+## V2 Release
+
+Added:
+
+- Final graduated dither treatment for the solid shadow beneath the sphinx
+  head. The approved reference was re-encoded into the resident one-bit
+  background, changing only the original shadow interior.
+- Pyramid background art on the high-score name-entry screen.
+
+Changed:
+
+- Promoted the project and build output from `final v2 candidate` to
+  `Bomb Jacques V2 release`.
+- Removed the unused legacy `HudText` string containing `BUILD 008`.
+- Refreshed source headers, renderer comments, learning documents, release
+  metadata, and downloadable cassette artifacts.
+- Corrected the video/CPU documentation to describe the optimized `MUL`-based
+  cell addressing and unrolled `PULU D` cell drawing paths.
+
+Verified:
+
+- `tools/build.sh` passes.
+- `git diff --check` passes.
+- The background remains 120 stored rows by 30 bytes, covering source rows
+  56-175.
+- All 259 background pixel changes are black-to-cyan openings inside the
+  original sphinx-shadow mask; no pyramid, face, outline, or ground pixel is
+  changed.
+- V2 raw binary: 19677 bytes, loaded at `$4000-$8CDC`.
+- V2 `LOADM` stream: 19687 bytes.
+- V2 K7 image: 21381 bytes.
+- V2 K7 SHA-256:
+  `9fac6f699a76f0cafd605abe4413aa158698c87d2467630b6c54669d4dedffeb`.
+
 ## Final v2 Candidate
 
 Changed:
@@ -13,8 +47,8 @@ Observed:
 
 - `tools/build.sh` passes.
 - `git diff --check` passes.
-- Current raw binary range is `$4000-$8CF3`.
-- Current downloadable K7 size is 21404 bytes.
+- Candidate raw binary range was `$4000-$8CF3`.
+- Candidate downloadable K7 size was 21404 bytes.
 
 ## v2 Sound Pass
 
@@ -44,8 +78,8 @@ Changed:
 Observed:
 
 - `tools/build.sh` passes.
-- Current raw binary range is `$4000-$8CF3`.
-- Current downloadable K7 size is 21404 bytes.
+- Sound-pass raw binary range was `$4000-$8CF3`.
+- Sound-pass downloadable K7 size was 21404 bytes.
 
 Status:
 

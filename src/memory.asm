@@ -1,7 +1,7 @@
 ;==============================================================================
 ; memory.asm
 ;
-; Memory notes for BUILD 008.
+; Memory notes for the Bomb Jacques V2 release.
 ;
 ; This file does not allocate memory. It lives near the top of the include list
 ; as a reminder of the address contract shared by code, build script, DCMOTO,
@@ -17,5 +17,6 @@
 ;   after code    early writable variables owned by their modules
 ;   $9FFF down   stack
 ;
-; A future milestone will reserve a named game-state block explicitly once the
-; movement, collection, enemy, and score variables have settled.
+; Writable state remains grouped by subsystem in input.asm and game/state.asm.
+; The release keeps one continuous assembly unit rather than adding a linker or
+; a separately reserved state segment.

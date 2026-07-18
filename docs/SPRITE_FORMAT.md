@@ -302,8 +302,9 @@ Total bitmap data size:
 
 ## Gameplay Background Bitmap
 
-`src/game/backgrounds.asm` stores the v2 Egypt gameplay background. The full
-source image is 240x176 pixels, matching the active arena exactly:
+`src/game/backgrounds.asm` stores the V2 Egypt background used by gameplay and
+name entry. The full source image is 240x176 pixels, matching the active arena
+exactly:
 
 ```text
 30 bytes per row * 176 rows = 5280 bytes
@@ -319,6 +320,10 @@ source rows 56-175
 `DrawArenaBackground` clears the whole arena to cyan, then copies the stored
 lower rows. `DrawArenaBackgroundCellAtAB` restores one 8x8 cell when a moving
 sprite erases over the image.
+
+The sphinx-shadow gradient is part of the stored one-bit bitmap. The V2 release
+re-encoding opened 259 black pixels inside the original solid-shadow mask while
+leaving all other background pixels unchanged.
 
 ## Editing Sprites Safely
 

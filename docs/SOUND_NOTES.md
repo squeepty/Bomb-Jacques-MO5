@@ -1,7 +1,7 @@
 # Sound Notes
 
-This document explains the current Bomb Jacques sound pass. The implementation
-lives in `src/sound.asm`.
+This document explains the Bomb Jacques V2 sound pass. The implementation lives
+in `src/sound.asm`.
 
 ## Hardware Path
 
@@ -68,7 +68,7 @@ so failed jumps, missed pickups, and ignored collisions remain silent.
 
 ## Tuning Notes
 
-The current timings are a first musical sketch:
+The V2 timings use the following compact musical vocabulary:
 
 - Normal bomb pickup keeps the short medium blip.
 - Lit bomb uses a short brighter blip near E#7/F7, keeping it close to the

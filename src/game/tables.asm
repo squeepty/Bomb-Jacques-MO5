@@ -12,15 +12,15 @@
 ; WaitFrame
 ;
 ; Purpose:
-;   Provides a simple fixed delay until milestone timing uses the 50 Hz IRQ.
+;   Provides the V2 release's simple fixed frame delay.
 ;
 ; Modified:
 ;   X, Y
 ;------------------------------------------------------------------------------
 WaitFrame:
         ; Busy-wait timing burns CPU cycles in two nested loops. It is simple and
-        ; deterministic enough for this milestone, but will eventually give way
-        ; to interrupt-driven 50 Hz timing.
+        ; deterministic for this release. A future timing redesign can replace
+        ; it with an interrupt-driven 50 Hz cadence.
         ldx     #FRAME_DELAY_OUTER
 
 WaitFrameOuter:
@@ -110,10 +110,6 @@ CheatSqueeptyText:
         ; Cheat text is length-controlled by CHEAT_SQUEEPTY_LEN, so it does not
         ; need a zero terminator.
         fcc     "SQUEEPTY"
-
-HudText:
-        fcc     "BOMB JACQUES BUILD 008"
-        fcb     0
 
 VersionLabelText:
         fcc     "(v2)"

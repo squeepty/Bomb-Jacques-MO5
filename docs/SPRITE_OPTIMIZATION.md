@@ -182,7 +182,10 @@ source rows 56-175
 `DrawArenaBackground` draws the full gameplay background at level start.
 `DrawArenaBackgroundCellAtAB` restores one 8x8 cell during sprite erases.
 
-This keeps the anti-flicker renderer compatible with non-empty scenery.
+The same resident image now backs the name-entry screen, and the V2 release's
+graduated sphinx shadow needs no special runtime path: full draws and cell
+restores both read the finalized bitmap bytes. This keeps the anti-flicker
+renderer compatible with non-empty scenery.
 
 ## Expected Effect
 
@@ -208,6 +211,7 @@ After changes in this area, test:
 - score popup expiry restoring the bomb/background underneath
 - death and respawn near border/background/platform cells
 - `GET READY` and `WELL DONE!` erasing back to static content
+- name entry retaining the pyramid/sphinx background
 - title and hall screens still clearing to plain cyan instead of gameplay art
 
 The key invariant: erasing a moving object should restore exactly what would

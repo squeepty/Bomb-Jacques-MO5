@@ -1,17 +1,18 @@
 # Known Bugs
 
-## Final v2 Candidate / Current
+## V2 Release / Current
 
-- No blocking gameplay bugs are currently known for the final v2 candidate.
-- Final DCMOTO play-through verification is still recommended across all ten
-  levels, especially sprite restores over the Egypt background image and audio
-  balance for the new buzzer effects.
+- No blocking gameplay bugs are currently known for V2.
+- The name-entry pyramid background and graduated sphinx shadow received final
+  visual verification during the V2 release pass.
+- A complete DCMOTO or hardware play-through across all ten levels remains a
+  useful platform check, especially for background restores and buzzer balance.
 - Timing still uses the temporary busy-wait loop and
   `PLAY_TICKS_PER_SECOND = 17`, not a 50 Hz interrupt.
 - Sound effects are implemented as short blocking phrases. They should be
   validated in DCMOTO or on hardware for feel and volume.
-- The title, hall-of-fame, sprite editor, and right-panel art flows are
-  functional but still open to visual polish.
+- Title, hall-of-fame, name-entry, sprite-editor, and right-panel art flows are
+  complete for V2.
 
 ## BUILD 007
 

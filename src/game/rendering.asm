@@ -714,10 +714,11 @@ ClearGameAreaCol:
         rts
 
 DrawArenaBackground:
-        ; The gameplay background is separate from ClearGameArea so title/hall
-        ; screens can still clear to plain cyan. The top of the source art is
-        ; empty cyan, so the full arena is cleared first and only the lower
-        ; bitmap rows are stored/copied.
+        ; The arena background is separate from ClearGameArea so title/hall
+        ; screens can still clear to plain cyan while gameplay and name entry
+        ; retain the pyramid art. The top of the source art is empty cyan, so
+        ; the full arena is cleared first and only the lower bitmap rows are
+        ; stored/copied.
         jsr     SelectBitmapPlane
         ldx     #VIDEO_BITMAP_BASE+ARENA_BACKGROUND_BASE_OFFSET
         ldy     #ARENA_BACKGROUND_PIXEL_ROWS
@@ -847,9 +848,9 @@ DrawHallOfFameRows:
         jmp     DrawVersionLabel
 
 DrawNameEntryScreen:
-        ; Name entry uses the same title/header style as the hall, then draws
-        ; the editable PlayerNameText field.
-        jsr     ClearGameArea
+        ; Keep the pyramid visible behind the name-entry prompt, then draw the
+        ; same title/header style as the hall and the editable PlayerNameText.
+        jsr     DrawArenaBackground
 
         ldb     #0
         jsr     LoadHallLineColor

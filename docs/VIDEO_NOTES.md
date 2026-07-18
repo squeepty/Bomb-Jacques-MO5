@@ -94,19 +94,25 @@ offset = 3 * 320 + 5
 offset = 965 = $03C5
 ```
 
-`CellAddress` uses a lookup table instead of multiplying at runtime:
+`CellAddress` uses the 6809 `MUL` instruction and a 16-bit shift:
 
 ```asm
-TextRowOffsets:
-        fdb     0
-        fdb     320
-        fdb     640
-        ...
-        fdb     7680
+        sta     CellAddressColumn
+        lda     #4*VIDEO_BYTES_PER_ROW
+        mul
+        lslb
+        rola
+        addd    #VIDEO_BITMAP_BASE
+CellAddressColumn equ *-1
+        tfr     d,x
+        leay    ,x
 ```
 
-The routine loads `row * 320`, adds the column, and returns the address in both
-`X` and `Y`. `Y` mirrors `X` because bitmap and color planes share offsets.
+`MUL` first produces `row * 160`; `LSLB`/`ROLA` double that 16-bit result to
+`row * 320`. Because the game executes from writable RAM, the column is patched
+into the low byte of the `ADDD` immediate operand. This avoids the former
+row-offset table. The final address is returned in both `X` and `Y`; the planes
+share offsets even though only one is visible at a time.
 
 ## Clearing The Whole Screen
 
@@ -150,36 +156,43 @@ Inputs:
 | `B` | Text row. |
 | `DrawCellColor` | Color attribute byte to write. |
 
-Bitmap loop:
+The hot path is unrolled. `PULU D` fetches two source rows at once, and fixed
+offset stores write all eight bitmap rows without a loop branch:
 
 ```asm
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellBitmapRow:
-        lda     ,u+
-        sta     ,x
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellBitmapRow
+        leax    120,x
+        pulu    d
+        sta     -120,x
+        stb     -80,x
+        pulu    d
+        sta     -40,x
+        stb     ,x
+        pulu    d
+        sta     40,x
+        stb     80,x
+        pulu    d
+        sta     120,x
+        stb     160,x
 ```
 
-It writes one byte, then advances by 40 bytes to reach the next pixel row in
-the same cell column.
-
-Color loop:
+Seven offsets fit the 6809's fast 8-bit indexed form after moving `X` to bitmap
+row 3; only the final `160,x` store needs the wider offset form. The color path
+is unrolled in the same shape:
 
 ```asm
         lda     DrawCellColor
-        ldb     #TEXT_CELL_HEIGHT
-
-DrawCellColorRow:
+        sta     -120,x
+        sta     -80,x
+        sta     -40,x
         sta     ,x
-        leax    VIDEO_BYTES_PER_ROW,x
-        decb
-        bne     DrawCellColorRow
+        sta     40,x
+        sta     80,x
+        sta     120,x
+        sta     160,x
 ```
 
-One color byte is written for each of the 8 rows covered by the cell.
+One color byte is still written for each of the eight rows covered by the cell;
+the unrolling only removes loop and source-load overhead.
 
 ## Drawing A Masked Cell
 
@@ -254,9 +267,9 @@ screen content has been cleared and redrawn.
 
 ## Gameplay Background
 
-The v2 candidate adds a 240x176 two-color Egypt background behind the gameplay
-arena. The source image exactly matches the active game area: 30 bytes per
-pixel row by 176 rows.
+V2 includes a 240x176 two-color Egypt background behind gameplay and the
+high-score name-entry screen. The source image exactly matches the active game
+area: 30 bytes per pixel row by 176 rows.
 
 The upper part of the image is empty cyan. To save program space, the generated
 `src/game/backgrounds.asm` stores only the lower cell-aligned slice:
@@ -268,8 +281,12 @@ source rows 56-175
 
 `DrawArenaBackground` clears the whole arena bitmap footprint to zero, fills the
 same color-plane footprint with `COLOR_BACKGROUND`, then streams the stored
-lower bitmap rows into video RAM. This keeps title and hall screens plain while
-gameplay levels get the pyramid/sphinx art.
+lower bitmap rows into video RAM. Title and hall screens remain plain; gameplay
+and name entry get the pyramid/sphinx art.
+
+The finalized resident bitmap includes a graduated dither beneath the sphinx
+head. Only the original solid-shadow interior differs from the source art, so
+the pyramid, face, outline, and ground remain unchanged.
 
 ## Gameplay Rendering Strategy
 

@@ -68,7 +68,7 @@ LOAD_END_DEC=$((0x$LOAD_START_HEX + BIN_SIZE - 1))
 LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
 
 {
-    printf "Bomb Jacques final v2 candidate\n"
+    printf "Bomb Jacques V2 release\n"
     printf "\n"
     printf "DCMOTO binary loader settings:\n"
     printf "\n"
@@ -89,7 +89,7 @@ LOAD_END_HEX=$(printf "%04X" "$LOAD_END_DEC")
     printf "4. Set PC to $%s and run.\n" "$LOAD_START_HEX"
 } > "$LOAD_OUT"
 
-echo "final v2 candidate assembled"
+echo "Bomb Jacques V2 release assembled"
 echo "  dcmoto bin: $BIN_OUT"
 echo "  raw copy:   $RAW_OUT"
 echo "  loadm:      $LOADM_OUT"

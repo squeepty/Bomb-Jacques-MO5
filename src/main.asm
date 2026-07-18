@@ -1,6 +1,6 @@
 ;==============================================================================
 ; Bomb Jacques
-; BUILD 008
+; V2 release
 ;
 ; A Thomson MO5 assembly game.
 ;
@@ -23,24 +23,23 @@
 ; Start
 ;
 ; Purpose:
-;   Program entry point for BUILD 008.
+;   Program entry point for Bomb Jacques V2.
 ;
 ; Input:
 ;   None. The program is expected to be loaded and executed at PROGRAM_ORIGIN.
 ;
 ; Output:
-;   The MO5 screen shows a static arena, movable player, bombs, score,
-;   highlighted bonus bomb, two patrolling enemies, lives, death/respawn, and
-;   game over.
+;   Video, sound, input, and game state are initialized, then the MO5 enters the
+;   title/hall-of-fame attract loop that leads into the ten-level game.
 ;
 ; Modified:
 ;   All registers may be modified during initialization.
 ;
 ; Algorithm:
-;   1. Disable interrupts while BUILD 008 owns the machine.
+;   1. Disable interrupts while Bomb Jacques owns the machine.
 ;   2. Initialize the stack pointer.
 ;   3. Initialize input and game state.
-;   4. Run the milestone 8 gameplay loop.
+;   4. Run the cooperative gameplay loop.
 ;------------------------------------------------------------------------------
 Start:
         ; Disable IRQ and FIRQ while the game owns the machine. The current
